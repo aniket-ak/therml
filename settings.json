@@ -10,20 +10,20 @@
     },
     "BC": {
         "X+": {
-            "type": "constant_flux",
-            "value": 10
-        },
-        "X-": {
             "type": "constant_T",
             "value": 10
         },
-        "Y+": {
+        "X-": {
             "type": "insulated",
-            "value": 0
+            "value": 10
+        },
+        "Y+": {
+            "type": "constant_T",
+            "value": 1
         },
         "Y-": {
-            "type": "HTC",
-            "value": 0
+            "type": "constant_T",
+            "value": 1
         },
         "Z+": {
             "type": "insulated",
@@ -34,6 +34,7 @@
             "value": 0
         }
     },
+    "IC": 25,
     "model": {
         "bodies": {
             "die": {
@@ -49,6 +50,6 @@
                 }
             }
         },
-        "num_sources": 5
+        "num_sources": 20
     }
 }

@@ -8,56 +8,65 @@ include("./functions.jl")
 f = open("settings.json", "r")
 settings = JSON.parse(f)
 
-N = settings["model"]["num_sources"]
-xy_mesh = range(0, stop = 1, length = N)
+num_sources = settings["model"]["num_sources"]
+(x_start,x_end), (y_start, y_end), (z_start, z_end), xy_mesh, u0, N, ghost_cells = build_domain(settings, num_sources)
+
 source = zeros(N,N)
-source[2:3, 2:3] .= 1.0
+source[20:40, 10:20] .= 10.0
 
 println(Dates.format(now(), "HH:MM:SS"))
 
 limit(a, N) = a == N + 1 ? 1 : a == 0 ? N : a
-# if a == N+1:
-    # return 1
-# elif a == 0:
-    # return N
-# else:
-# return a
 
-x_start, y_start, z_start, x_end, y_end, z_end = get_indices(settings, N)
+println((x_start,x_end), (y_start, y_end), (z_start, z_end), N)
 
 function conduction_2d_loop!(du, u, p, t)
     source, alpha, dx = p
     alpha = alpha / dx^2
+    
+    # du[1,:] = du[end,:] .= 0
+    
+
+    if settings["BC"]["X-"]["type"] == "constant_T"
+        u[1,:] .= settings["BC"]["X-"]["value"]
+    elseif settings["BC"]["X-"]["type"] == "insulated"
+        u[1,:] .= u[2,:]
+    end
+    if settings["BC"]["X+"]["type"] == "constant_T"
+        u[end,:] .= settings["BC"]["X+"]["value"]
+    end
+
+    if settings["BC"]["Y-"]["type"] == "constant_T"
+        u[:,1] .= settings["BC"]["Y-"]["value"]
+    end
+    if settings["BC"]["Y+"]["type"] == "constant_T"
+        u[:,end] .= settings["BC"]["Y+"]["value"]
+    end
+
     @inbounds for i in range(x_start, x_end)
         @inbounds for j in range(y_start, y_end)
             ip1, im1, jp1, jm1 = limit(i + 1, N), limit(i - 1, N), limit(j + 1, N), limit(j - 1, N)
+            # ip1, im1, jp1, jm1 = i + 1, i - 1, j + 1, j - 1
+            # if im1 == 0
+            #     du[i, j] = alpha * (u[im1, j] + u[ip1, j] + u[i, jp1] + u[i, jm1] - 4u[i, j]) + source[i, j]
+            # elseif ip1 == x_end
+            #     du[i, j] = alpha * (u[im1, j] + u[ip1, j] + u[i, jp1] + u[i, jm1] - 4u[i, j]) + source[i, j]
+            # elseif 
             du[i, j] = alpha * (u[im1, j] + u[ip1, j] + u[i, jp1] + u[i, jm1] - 4u[i, j]) + source[i, j]
         end
     end
-
-    du[1,:] = du[end,:] .= 0
-    du[:,1] = du[:, end] .= 1
-
-    # if settings["BC"]["X-"]["type"] == "adiabatic":
+    # du[:,1] = du[:, end] .= 1
 
 end
 p = (source, 0.001, step(xy_mesh))
 
-function init_conduction_2d!(xyd)
-    N = length(xyd)
-    u = zeros(N, N)
-    # for I in CartesianIndices((N, N))
-    #     i,j = Tuple(I)
-    #     if i > 45 && i<50 && j<50 && j>45
-    #         u[i, j] = 10
-    #     else
-    #         u[i,j] = 0
-    #     end
-    # end
-    u
-end
-u0 = init_conduction_2d!(xy_mesh)
-prob_conduction_2d = ODEProblem(conduction_2d_loop!, u0, (0.0, 10), p)
+# function init_conduction_2d!(xyd)
+#     N = length(xyd)
+#     u = zeros(N, N)
+#     return u
+# end
+# u0 = init_conduction_2d!(xy_mesh)
+# prob_conduction_2d = ODEProblem(conduction_2d_loop!, u0, (0.0, 10), p)
 
 
 du0 = copy(u0)
@@ -77,7 +86,7 @@ sol = solve(prob_conduction_2d_sparse,
 println(Dates.format(now(), "HH:MM:SS"))
 
 
-plot(contour(x=xy_mesh,y=xy_mesh,z=sol[end]', colorscale="Jet",colorbar=attr(
+plot(contour(x=xy_mesh,y=xy_mesh,z=sol[end][x_start:end,:]', colorscale="Jet",colorbar=attr(
     title="Temperature", # title here
     titleside="right",
     titlefont=attr(

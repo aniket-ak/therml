@@ -1,0 +1,54 @@
+{
+    "problem": "2d",
+    "units": {
+        "temperature": "C",
+        "length": "m",
+        "time": "s",
+        "velocity": "m/s",
+        "acceleration": "m/s2",
+        "pressure": "atm"
+    },
+    "BC": {
+        "X+": {
+            "type": "constant_flux",
+            "value": 10
+        },
+        "X-": {
+            "type": "constant_T",
+            "value": 10
+        },
+        "Y+": {
+            "type": "insulated",
+            "value": 0
+        },
+        "Y-": {
+            "type": "HTC",
+            "value": 0
+        },
+        "Z+": {
+            "type": "insulated",
+            "value": 0
+        },
+        "Z-": {
+            "type": "HTC",
+            "value": 0
+        }
+    },
+    "model": {
+        "bodies": {
+            "die": {
+                "size": {
+                    "X": 10,
+                    "Y": 10
+                },
+                "material": {
+                    "name": "Si",
+                    "k": 1,
+                    "rho": 1,
+                    "Cp": 1
+                }
+            }
+        },
+        "num_sources": 5
+    }
+}

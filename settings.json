@@ -10,7 +10,7 @@
     },
     "BC": {
         "X+": {
-            "type": "constant_T",
+            "type": "insulated",
             "value": 10
         },
         "X-": {
@@ -18,11 +18,11 @@
             "value": 10
         },
         "Y+": {
-            "type": "constant_T",
+            "type": "insulated",
             "value": 1
         },
         "Y-": {
-            "type": "constant_T",
+            "type": "insulated",
             "value": 1
         },
         "Z+": {

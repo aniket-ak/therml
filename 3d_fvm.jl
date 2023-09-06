@@ -60,10 +60,10 @@ prob_conduction_3d_sparse = ODEProblem(f, u0, (0.0, 10.0), p)
 
 sol = solve(prob_conduction_3d_sparse, 
             KenCarp47(linsolve = KLUFactorization()),
-            save_everystep = false, 
-            saveat=100.0, 
-            progress=true, 
-            maxiters=1e3, 
+            save_everystep = true,
+            progress=true,
+            saveat=1.0,
+            maxiters=100000,
             abstol=1e-4, 
             reltol=1e-4);
 
@@ -71,13 +71,8 @@ sol = solve(prob_conduction_3d_sparse,
 # sol = solve(prob_conduction_3d, TRBDF2(), saveat=1.0);
 
 println(Dates.format(now(), "HH:MM:SS"))
-result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,1], "K", "C")'
+result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
 
-plot(contour(x=xy_mesh,y=xy_mesh,z=result_, colorscale="Jet",colorbar=attr(
-    title="Temperature", # title here
-    titleside="right",
-    titlefont=attr(
-        size=14,
-        family="Arial, sans-serif"
-    )
+plot(contour(x=x_mesh,y=y_mesh,z=result_, colorscale="Jet",colorbar=attr(
+    title="Temperature", titleside="right",titlefont=attr(size=14,family="Arial, sans-serif")
 )),Layout(autosize=true))

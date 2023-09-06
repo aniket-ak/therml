@@ -6,32 +6,52 @@
         "time": "s",
         "velocity": "m/s",
         "acceleration": "m/s2",
-        "pressure": "atm"
+        "pressure": "atm",
+        "power": "W",
+        "flux": "W/m2"
     },
     "BC": {
         "X+": {
             "type": "insulated",
-            "value": 10
+            "value": {
+                "t_amb" : 25,
+                "value" : 10000
+            }
         },
         "X-": {
-            "type": "insulated",
-            "value": 10
+            "type": "HTC",
+            "value": {
+                "t_amb" : 25,
+                "value" : 100
+            }
         },
         "Y+": {
             "type": "insulated",
-            "value": 1
+            "value": {
+                "t_amb" : 25,
+                "value" : 10
+            }
         },
         "Y-": {
             "type": "insulated",
-            "value": 1
+            "value": {
+                "t_amb" : 25,
+                "value" : 10
+            }
         },
         "Z+": {
             "type": "insulated",
-            "value": 0
+            "value": {
+                "t_amb" : 25,
+                "value" : 10
+            }
         },
         "Z-": {
             "type": "HTC",
-            "value": 0
+            "value": {
+                "t_amb" : 25,
+                "value" : 10
+            }
         }
     },
     "IC": 25,
@@ -44,9 +64,9 @@
                 },
                 "material": {
                     "name": "Si",
-                    "k": 1,
-                    "rho": 1,
-                    "Cp": 1
+                    "k": 148,
+                    "rho": 2330,
+                    "cp": 710
                 }
             }
         },

@@ -59,17 +59,22 @@
         "bodies": {
             "die": {
                 "size": {
-                    "X": 10,
-                    "Y": 10
+                    "X": 0.01,
+                    "Y": 0.01,
+                    "Z": 0.002
                 },
                 "material": {
                     "name": "Si",
-                    "k": 148,
-                    "rho": 2330,
-                    "cp": 710
+                    "k": 148.0,
+                    "rho": 2330.0,
+                    "cp": 710.0
                 }
             }
         },
-        "num_sources": 20
+        "num_sources": {
+            "X": 20,
+            "Y": 20
+        },
+        "smallest_thickness": 0.001
     }
 }

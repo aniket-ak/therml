@@ -72,8 +72,8 @@
             }
         },
         "num_sources": {
-            "X": 1000,
-            "Y": 1000
+            "X": 500,
+            "Y": 500
         },
         "smallest_thickness": 0.001
     },

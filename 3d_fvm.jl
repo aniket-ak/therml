@@ -10,7 +10,7 @@ settings = JSON.parse(f)
 
 temperature_base_units = settings["units"]["temperature"]
 
-mesh, u0, N = build_domain(settings)
+mesh, u0, N, z_length = build_domain(settings)
 
 x_mesh, y_mesh, z_mesh = mesh
 Nx,Ny,Nz = N
@@ -63,16 +63,23 @@ sol = solve(prob_conduction_3d_sparse,
             save_everystep = true,
             progress=true,
             saveat=1.0,
-            maxiters=100000,
-            abstol=1e-4, 
-            reltol=1e-4);
+            maxiters=1000,
+            abstol=1e-3, 
+            reltol=1e-6);
 
-# prob_conduction_3d = ODEProblem(conduction_3d_loop!, u0, (0,10), p);
-# sol = solve(prob_conduction_3d, TRBDF2(), saveat=1.0);
+# prob_conduction_3d = ODEProblem(conduction_3d_loop!, u0, (0,10.0), p);
+# sol = solve(prob_conduction_3d, 
+#             alg_hints = [:stiff], 
+#             saveat=1.0, 
+#             abstol=1e-4, 
+#             reltol=1e-4, 
+#             maxiters=1000, 
+#             save_everystep=true);
+# sol = solve(prob_conduction_3d)
 
 println(Dates.format(now(), "HH:MM:SS"))
 result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
 
-plot(contour(x=x_mesh,y=y_mesh,z=result_, colorscale="Jet",colorbar=attr(
+plot(contour(x=x_mesh*z_length,y=y_mesh*z_length,z=result_, colorscale="Jet",colorbar=attr(
     title="Temperature", titleside="right",titlefont=attr(size=14,family="Arial, sans-serif")
 )),Layout(autosize=true))

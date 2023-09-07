@@ -2,17 +2,25 @@ int(x) = floor(Int, x)
 
 function build_domain(settings)
 
+    x_length = settings["model"]["bodies"]["die"]["size"]["X"]
+    y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
+    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+
+    x_normalized = x_length/z_length
+    y_normalized = y_length/z_length
+    z_normalized = z_length/z_length
+
     Nx = 2*settings["model"]["num_sources"]["X"] + 2 # including ghost cells
     Ny = 2*settings["model"]["num_sources"]["Y"] + 2 # including ghost cells
     Nz = max(2, 2*int(settings["model"]["bodies"]["die"]["size"]["Z"]/settings["model"]["smallest_thickness"]))
     
-    x_mesh = range(0, stop = settings["model"]["bodies"]["die"]["size"]["X"], length = Nx+1)
-    y_mesh = range(0, stop = settings["model"]["bodies"]["die"]["size"]["Y"], length = Ny+1)
-    z_mesh = range(0, stop = settings["model"]["bodies"]["die"]["size"]["Z"], length = Nz+1)
+    x_mesh = range(0, stop = x_normalized, length = Nx+1)
+    y_mesh = range(0, stop = y_normalized, length = Ny+1)
+    z_mesh = range(0, stop = z_normalized, length = Nz+1)
 
     u = zeros(Nx, Ny, Nz)
 
-    return (x_mesh, y_mesh, z_mesh), u, (Nx, Ny, Nz)
+    return (x_mesh, y_mesh, z_mesh), u, (Nx, Ny, Nz), z_length
 end
 
 function convert_units(quantity, value, from_units, to_units)

@@ -8,7 +8,7 @@ include("./functions_fvm_3d.jl")
 fw = open("./run.log","w")
 
 f = open("settings.json", "r")
-settings = JSON.parse(f)
+CONSTANT settings = JSON.parse(f)
 
 temperature_base_units = settings["units"]["temperature"]
 

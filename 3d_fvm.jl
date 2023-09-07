@@ -5,6 +5,8 @@ using JSON
 using Dates
 include("./functions_fvm_3d.jl")
 
+fw = open("./run.log","w")
+
 f = open("settings.json", "r")
 settings = JSON.parse(f)
 
@@ -15,6 +17,8 @@ mesh, u0, N, z_length = build_domain(settings)
 x_mesh, y_mesh, z_mesh = mesh
 Nx,Ny,Nz = N
 
+println("Total mesh count :",(Nx-2)*(Ny-2)*(Nz-2)/1e6," M cells")
+
 delta_x, delta_y, delta_z = step(x_mesh), step(y_mesh), step(z_mesh)
 
 u0 .= convert_units("temperature", settings["IC"], temperature_base_units, "K")
@@ -23,6 +27,9 @@ source = zeros(Nx,Ny,Nz)
 source[10:20, 10:20, :] .= 1
 
 println(Dates.format(now(), "HH:MM:SS"))
+
+write(fw, "\n-----\n")
+write(fw, "Start time:", Dates.format(now(), "HH:MM:SS"),"\n")
 
 function conduction_3d_loop!(du, u, p, t)
     source, k, rho, cp, (delta_x, delta_y, delta_z) = p
@@ -80,6 +87,8 @@ sol = solve(prob_conduction_3d_sparse,
 println(Dates.format(now(), "HH:MM:SS"))
 result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
 
-plot(contour(x=x_mesh*z_length,y=y_mesh*z_length,z=result_, colorscale="Jet",colorbar=attr(
-    title="Temperature", titleside="right",titlefont=attr(size=14,family="Arial, sans-serif")
-)),Layout(autosize=true))
+write(fw, "End time:", Dates.format(now(), "HH:MM:SS"))
+write(fw, "\n-----\n")
+#plot(contour(x=x_mesh*z_length,y=y_mesh*z_length,z=result_, colorscale="Jet",colorbar=attr(
+#    title="Temperature", titleside="right",titlefont=attr(size=14,family="Arial, sans-serif")
+#)),Layout(autosize=true))

@@ -31,6 +31,8 @@ function convert_units(quantity, value, from_units, to_units)
         elseif from_units == "K" && to_units == "C"
             return_value = value .- 273.15
             return return_value
+        else
+            return value
         end
     else
         return value

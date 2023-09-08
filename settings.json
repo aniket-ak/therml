@@ -75,7 +75,7 @@
             "X": 250,
             "Y": 250
         },
-        "smallest_thickness": 0.001
+        "smallest_thickness": 0.0005
     },
     "start_time":0.0,
     "end_time":10.0

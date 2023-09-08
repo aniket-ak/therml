@@ -6,6 +6,8 @@ using Dates
 using LoopVectorization
 include("./functions_fvm_3d.jl")
 
+fw = open("./run.log","w")
+
 f = open("settings.json", "r")
 settings = JSON.parse(f)
 
@@ -61,6 +63,9 @@ function do_plotting(settings, sol)
 end
 
 println(Dates.format(now(), "HH:MM:SS"))
+
+write(fw, "\n-----\n")
+write(fw, "Start time:", Dates.format(now(), "HH:MM:SS"),"\n")
 
 function conduction_3d_loop!(du, u, p, t)
     source, k, rho, cp, (delta_x, delta_y, delta_z) = p

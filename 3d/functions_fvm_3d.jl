@@ -1,7 +1,6 @@
 int(x) = floor(Int, x)
 
-function build_domain(settings)
-
+function create_mesh(settings)
     x_length = settings["model"]["bodies"]["die"]["size"]["X"]
     y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
     z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
@@ -12,15 +11,57 @@ function build_domain(settings)
 
     Nx = 2*settings["model"]["num_sources"]["X"] + 2 # including ghost cells
     Ny = 2*settings["model"]["num_sources"]["Y"] + 2 # including ghost cells
-    Nz = max(2, 2*int(settings["model"]["bodies"]["die"]["size"]["Z"]/settings["model"]["smallest_thickness"]))
+    Nz = max(2, 2*int(settings["model"]["bodies"]["die"]["size"]["Z"]/settings["model"]["smallest_thickness"])) + 2
     
     x_mesh = range(0, stop = x_normalized, length = Nx+1)
     y_mesh = range(0, stop = y_normalized, length = Ny+1)
     z_mesh = range(0, stop = z_normalized, length = Nz+1)
 
-    u = zeros(Nx, Ny, Nz)
+    delta_x, delta_y, delta_z = step(x_mesh), step(y_mesh), step(z_mesh)
+    return (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh)
+end
 
-    return (x_mesh, y_mesh, z_mesh), u, (Nx, Ny, Nz), z_length
+function build_domain(Nx,Ny,Nz)
+    u = zeros(Nx, Ny, Nz)
+    println("total mesh count: ", (Nx-2)*(Ny-2)*(Nz-2)/1e3, " k")
+    println("Mesh elements across X, Y and Z ", Nx-2," , ",Ny-2," , ",Nz-2)
+    return u
+end
+
+function initialize_domain!(u0)
+    T_initial = convert_units("temperature", settings["IC"], temperature_base_units, "K")
+    u0 = u0 .+ T_initial
+    return u0
+end
+
+function define_volume_sources(Nx,Ny,Nz)
+    source = zeros(Nx,Ny,Nz)
+    source[10:20, 50:70, 1:5] .= 1
+    return source
+end
+
+function do_plotting(sol)
+    result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
+    # result_ = sol[end][2:end-1,2:end-1,2]
+    (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
+    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+    
+    p = plot(
+        contour(
+            x=x_mesh*z_length,
+            y=y_mesh*z_length,
+            z=result_, 
+            colorscale="Jet",
+            colorbar=attr(width=80, height=80, automargin=true,title="Temperature", 
+                        titleside="right",
+                        titlefont=attr(size=14,family="Arial, sans-serif"))
+            ),
+        # Layout(autosize=true)
+    )
+
+    open("./plot.html", "w") do io
+        PlotlyBase.to_html(io, p.plot)
+    end
 end
 
 function convert_units(quantity, value, from_units, to_units)
@@ -134,6 +175,56 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
         t_amb = convert_units("temperature", settings["BC"]["Z+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[:,:,end] .= u[:,:,end-1]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
     end
+end
+
+function conduction_3d_loop!(du, u, p, t)
+    source, k, rho, cp, (delta_x, delta_y, delta_z) = p
+    alpha_x = (k/(rho*cp)) / delta_x^2
+    alpha_y = (k/(rho*cp)) / delta_y^2
+    alpha_z = (k/(rho*cp)) / delta_z^2
+
+    Nx, Ny, Nz = size(u)
+
+    Threads.@threads for k_ in range(2, Nz-1)
+        Threads.@threads for j_ in range(2, Ny-1)
+            Threads.@threads for i_ in range(2, Nx-1)
+                ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
+                du[i_, j_, k_] =  alpha_x * (u[im1, j_, k_] + u[ip1, j_, k_] - 2u[i_,j_, k_])+
+                                    alpha_y * (u[i_, jp1, k_] + u[i_, jm1, k_] - 2u[i_, j_, k_]) + 
+                                    alpha_z* (u[i_, j_, kp1] + u[i_, j_, km1] - 2u[i_, j_, k_]) +  
+                                    source[i_, j_, k_]
+            end
+        end
+    end
+
+    apply_bc(u, settings, delta_x, delta_y, delta_z)
+
+end
+
+function configure_problem_klu!(u0,p)
+    du0 = zeros(size(u0))
+    jac_sparsity = Symbolics.jacobian_sparsity((du, u) -> conduction_3d_loop!(du, u, p, 0.0), du0, u0)
+
+    f = ODEFunction(conduction_3d_loop!; jac_prototype = float.(jac_sparsity))
+
+    start_time = settings["start_time"]
+    end_time = settings["end_time"]
+
+    prob_conduction_3d_sparse = ODEProblem(f, u0, (start_time, end_time), p)
+
+    algorithm = KenCarp47(linsolve = KLUFactorization())
+
+    return prob_conduction_3d_sparse, algorithm
+end
+
+function configure_problem_ode!(u0,p)
+    start_time = settings["start_time"]
+    end_time = settings["end_time"]
+
+    problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
+    algorithm = ""
+
+    return problem, algorithm
 end
 
 function read_csv(file_name)

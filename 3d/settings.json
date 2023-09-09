@@ -72,11 +72,11 @@
             }
         },
         "num_sources": {
-            "X": 500,
-            "Y": 500
+            "X": 100,
+            "Y": 100
         },
         "smallest_thickness": 0.0005
     },
     "start_time":0.0,
-    "end_time":10.0
+    "end_time":1000.0
 }

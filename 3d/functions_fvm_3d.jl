@@ -63,24 +63,37 @@ function define_volume_sources(settings, Nx, Ny, Nz)
     return source
 end
 
-function do_plotting(sol)
+function do_plotting(sol, interpolation)
     result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
     z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
     
-    p = plot(
-        contour(
-            x=x_mesh*z_length,
-            y=y_mesh*z_length,
-            z=result_, 
-            colorscale="Jet",
-            colorbar=attr(width=80, height=80, automargin=true,title="Temperature", 
-                        titleside="right",
-                        titlefont=attr(size=14,family="Arial, sans-serif"))
-            ),
-        # Layout(autosize=true)
-    )
+    if interpolation == true
+        p = plot(
+            contour(
+                x=x_mesh*z_length,
+                y=y_mesh*z_length,
+                z=result_, 
+                colorscale="Jet",
+                colorbar=attr(width=80, height=80, automargin=true,title="Temperature", 
+                            titleside="right",
+                            titlefont=attr(size=14,family="Arial, sans-serif"))
+                ),
+            )
+    else
+        p = plot(
+            heatmap(
+                x=x_mesh*z_length,
+                y=y_mesh*z_length,
+                z=result_, 
+                colorscale="Jet",
+                colorbar=attr(width=80, height=80, automargin=true,title="Temperature", 
+                            titleside="right",
+                            titlefont=attr(size=14,family="Arial, sans-serif"))
+                ),
+            )
+    end
 
     open("./plot.html", "w") do io
         PlotlyBase.to_html(io, p.plot)

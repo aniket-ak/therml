@@ -4,6 +4,7 @@ using Symbolics
 using JSON
 using Dates
 using LoopVectorization
+using CSV, DataFrames
 include("./functions_fvm_3d.jl")
 
 fw = open("./run.log","w")

@@ -36,7 +36,9 @@ end
 
 function define_volume_sources(Nx,Ny,Nz)
     source = zeros(Nx,Ny,Nz)
-    source[10:20, 50:70, 1:5] .= 1
+    # source[10:20, 50:70, 1:5] .= 1
+    heat_values = read_csv("./heat_sources.csv")
+    source[:,:,trunc(Int, Nz/2)] = heat_values
     return source
 end
 
@@ -228,9 +230,7 @@ function configure_problem_ode!(u0,p)
 end
 
 function read_csv(file_name)
-
-    data = CSV.read(file_name, DataFrame,)
-
+    data = CSV.read(file_name, DataFrame)
     mat = Matrix(data)
     return mat
 end

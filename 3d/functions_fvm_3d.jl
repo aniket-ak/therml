@@ -34,11 +34,32 @@ function initialize_domain!(u0)
     return u0
 end
 
-function define_volume_sources(Nx,Ny,Nz)
+function define_volume_sources(settings, Nx, Ny, Nz)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
+
+    x_length = settings["model"]["bodies"]["die"]["size"]["X"]
+    y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
+    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+
+    x_normalized = x_length/z_length
+    y_normalized = y_length/z_length
+    z_normalized = z_length/z_length
+
+    x_mesh = range(0, stop = x_normalized, length = Nx+1)
+    y_mesh = range(0, stop = y_normalized, length = Ny+1)
+    z_mesh = range(0, stop = z_normalized, length = Nz+1)
+
+    cell_centers_x = range(step(x_mesh)/2, stop = x_normalized-step(x_mesh)/2, length = Nx)
+    cell_centers_y = range(step(y_mesh)/2, stop = x_normalized-step(y_mesh)/2, length = Ny)
+
     heat_values = read_csv("./heat_sources.csv")
-    source[:,:,trunc(Int, Nz/2)] = heat_values
+    source_Nx, source_Ny = size(heat_values)
+    source_x = range(0, x_normalized, source_Nx)
+    source_y = range(0, y_normalized, source_Ny)
+
+    interpolated_heat = interpolate_(source_x,source_y,heat_values,cell_centers_x,cell_centers_y)
+    source[:,:,2] = interpolated_heat
     return source
 end
 
@@ -243,23 +264,8 @@ function read_excel(file_name)
 
 end
 
-function interpolate()
-    x = range(-2, 3, length=20)
-    y = range(3, 4, length=10)
-    z = @. cos(x) + sin(y')
-    # Interpolatant object
+function interpolate_(x,y,z,new_x,new_y)
     itp = LinearInterpolation((x, y), z)
-    # Fine grid
-    x2 = range(extrema(x)..., length=300)
-    y2 = range(extrema(y)..., length=200)
-    # Interpolate
-    z2 = [itp(x,y) for y in y2, x in x2]
-    # Plot
-    p = heatmap(x2, y2, z2, clim=(-2,2), title="Interpolated heatmap")
-    scatter!(p, [x for _ in y for x in x], [y for y in y for _ in x], zcolor=z[:]; lab="original data", clim=(-2,2))
-
-    # plot(z)
-    plot(z2)
-
-    z2
+    new_z = [itp(x,y) for y in new_y, x in new_x]
+    return new_z
 end

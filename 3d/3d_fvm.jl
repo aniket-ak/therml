@@ -5,6 +5,7 @@ using JSON
 using Dates
 using LoopVectorization
 using CSV, DataFrames
+using Interpolations
 include("./functions_fvm_3d.jl")
 
 fw = open("./run.log","w")
@@ -29,7 +30,7 @@ function solve_()
 
     u0 = build_domain(Nx,Ny,Nz)
     
-    source = define_volume_sources(Nx,Ny,Nz)
+    source = define_volume_sources(settings,Nx,Ny,Nz)
 
     p = (source, k, rho, cp, (delta_x, delta_y, delta_z))
     u0 = initialize_domain!(u0)

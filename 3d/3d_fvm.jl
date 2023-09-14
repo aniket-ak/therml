@@ -6,6 +6,11 @@ using Dates
 using LoopVectorization
 using CSV, DataFrames
 using Interpolations
+using Logging: global_logger
+using TerminalLoggers: TerminalLogger
+
+global_logger(TerminalLogger())
+
 include("./functions_fvm_3d.jl")
 
 fw = open("./run.log","w")
@@ -49,4 +54,4 @@ sol = solve_();
 
 println(Dates.format(now(), "HH:MM:SS"))
 
-do_plotting(sol, false)
+do_plotting(sol, false);

@@ -55,3 +55,4 @@ sol = solve_();
 println(Dates.format(now(), "HH:MM:SS"))
 
 do_plotting(sol, false);
+save_fields(sol);

@@ -282,3 +282,13 @@ function interpolate_(x,y,z,new_x,new_y)
     new_z = [itp(x,y) for y in new_y, x in new_x]
     return new_z
 end
+
+function save_fields(sol)
+    jldopen("solution.jld", "w") do file
+        g = create_group(file, "solution")
+
+        for (i,t) in enumerate(sol.t)
+            g[string(i)] = sol.u[i]
+        end
+    end
+end

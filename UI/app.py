@@ -3,8 +3,14 @@ import dash_bootstrap_components as dbc
 from dash import dcc
 from dash import Input, Output, State, html
 from dash.dependencies import Input, Output
+import pandas as pd
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1.1"},
+    ],
+)
 # app.stylesheets.serve_locally=True
 app.scripts.serve_locally = True
 
@@ -164,7 +170,7 @@ navbar = dbc.NavbarSimple(
     ],
     brand="MarlinSim therML",
     brand_href="#",
-    color="darkblue",
+    color="#0c2340",
     dark=True,
 )
 
@@ -200,14 +206,14 @@ app.layout = dbc.Container([
                             upload_component,
                             ], width=3),
                     dbc.Col([
-                        dbc.Card([
+                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col(html.H4("Visualization"),width=6)]),
                             dbc.Row([
-                                dbc.Col([
-                                ], width=6, id="scenario"),
-                                dbc.Card([dbc.Col(["Visualization"])],)]),
-                            dbc.Card(
-                                [dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),])
-                        ])
+                                dbc.Col([], width=6, id="scenario"),
+                                dbc.Col([], width=6),
+                            ]),
+                        html.Hr(),
+                        dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),
+                        
                     ], width=9),
 
                     ]), label="Thermal Simulation"),
@@ -215,13 +221,28 @@ app.layout = dbc.Container([
     ]),
 ])
 
-# @app.callback(Output('output-data-upload', 'children'),
-#               Input('upload-data', 'contents'),
-#               State('upload-data', 'filename'),
-#               State('upload-data', 'last_modified'))
-# def update_output(list_of_contents, list_of_names, list_of_dates):
-#     print(list_of_names)
-#     return list_of_names
+@app.callback(Output('scenario', 'children'),
+              Input('upload-data', 'contents'),
+              State('upload-data', 'filename'))
+def update_output(content, list_of_names):
+    if list_of_names is not None:
+        df = pd.DataFrame()
+        df["Scenario"] = list_of_names
+        df["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
+        df["Progress"] = [dbc.Progress(value=10, striped=True) for i in list_of_names]
+        df["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize") for (i,name) in enumerate(list_of_names)]
+    else:
+        df = pd.DataFrame()
+    table_ = dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True)
+    return table_
+
+@app.callback(
+    Output("visualize", "is_open"),
+    Input("scenario", "contents"),
+)
+def toggle_modal(contents):
+    print(contents)
+    return 1
 
 # @app.callback(
 #     Output("modal", "is_open"),
@@ -234,14 +255,14 @@ app.layout = dbc.Container([
 #     return is_open
 
 
-@app.callback(
-    Output("scenario", "children"),
-    [Input("pagination", "active_page")],
-)
-def change_page(page):
-    if page:
-        return f"Page selected: {page}"
-    return "Select a page"
+# @app.callback(
+#     Output("scenario", "children"),
+#     [Input("pagination", "active_page")],
+# )
+# def change_page(page):
+#     if page:
+#         return f"Page selected: {page}"
+#     return "Select a page"
 
 
 if __name__ == "__main__":

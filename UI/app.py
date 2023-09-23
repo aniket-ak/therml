@@ -157,54 +157,40 @@ navbar = dbc.NavbarSimple(
     dark=True,
 )
 
-app.layout = dbc.Container(
-    [
-        navbar,
-        html.Hr(),
-        dbc.Row([
-            dbc.Col([
-                dbc.Card([
-                    dbc.Button("Settings", id="open", n_clicks=0),
-                    dbc.Modal(
-                        [
-                            dbc.ModalHeader(dbc.ModalTitle(
-                                "Model settings")),
-                            # dbc.ModalBody("This is the content of the modal"),
-                            left_accordion,
-                            dbc.ModalFooter(
-                                dbc.Button(
-                                    "Submit", id="close", className="ms-auto", n_clicks=0
-                                )
+app.layout = dbc.Container([
+    navbar,
+    html.Hr(),
+    dbc.Tabs([
+        dbc.Tab(
+            dbc.Row([
+                    dbc.Col([
+                        dbc.Card([
+                            dbc.Button("Settings", id="open", n_clicks=0),
+                            dbc.Modal(
+                                [
+                                    dbc.ModalHeader(dbc.ModalTitle(
+                                        "Model settings")),
+                                    # dbc.ModalBody("This is the content of the modal"),
+                                    left_accordion,
+                                    dbc.ModalFooter(
+                                        dbc.Button(
+                                            "Submit", id="close", className="ms-auto", n_clicks=0
+                                        )
+                                    ),
+                                ],
+                                id="modal",
+                                is_open=False,
                             ),
-                        ],
-                        id="modal",
-                        is_open=False,
-                    ),
-                ])
-            ], width=3),
-            dbc.Col([
-                dbc.Card([
-                    dbc.Button("Settings", id="open2", n_clicks=0),
-                    dbc.Modal(
-                        [
-                            dbc.ModalHeader(dbc.ModalTitle(
-                                "Model settings")),
-                            # dbc.ModalBody("This is the content of the modal"),
-                            left_accordion,
-                            dbc.ModalFooter(
-                                dbc.Button(
-                                    "Submit", id="close", className="ms-auto", n_clicks=0
-                                )
-                            ),
-                        ],
-                        id="modal2",
-                        is_open=False,
-                    ),
-                ])], width=10
-            )]
-        ),
-    ]
-)
+                        ])
+                    ], width=2),
+                    dbc.Row([
+                        dbc.Col(["table of scenarios"], width=1),
+                        dbc.Col(["Visualization"], width=1)
+                    ],
+                    )]
+                    ), label="Thermal Simulation"),
+        dbc.Tab("ML flow", label="Machine Learning")]),
+])
 
 
 # @app.callback(

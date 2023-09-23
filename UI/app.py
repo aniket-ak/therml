@@ -119,6 +119,17 @@ left_accordion = dbc.Accordion([
     ], title="Problem Setup"),
 ])
 
+settings_modal = dbc.Modal([
+    dbc.ModalHeader(dbc.ModalTitle(
+        "Model settings")),
+    left_accordion,
+    dbc.ModalFooter(
+        dbc.Button(
+            "Submit", id="close", className="ms-auto", n_clicks=0
+        )
+    ),
+], id="modal", is_open=False,)
+
 # bottom_console = dbc.
 
 navbar = dbc.NavbarSimple(
@@ -157,6 +168,25 @@ navbar = dbc.NavbarSimple(
     dark=True,
 )
 
+upload_component = dcc.Upload(
+    id='upload-data',
+    children=html.Div([
+        'Drag and Drop or ',
+        html.A('Select Files')
+    ]),
+    style={
+        'width': '100%',
+        'height': '40px',
+        'lineHeight': '40px',
+        'borderWidth': '1px',
+        'borderStyle': 'dashed',
+        'borderRadius': '5px',
+        'textAlign': 'center',
+        'margin': '1px'
+    },
+    multiple=True
+)
+
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
@@ -164,34 +194,34 @@ app.layout = dbc.Container([
         dbc.Tab(
             dbc.Row([
                     dbc.Col([
-                        dbc.Card([
                             dbc.Button("Settings", id="open", n_clicks=0),
-                            dbc.Modal(
-                                [
-                                    dbc.ModalHeader(dbc.ModalTitle(
-                                        "Model settings")),
-                                    # dbc.ModalBody("This is the content of the modal"),
-                                    left_accordion,
-                                    dbc.ModalFooter(
-                                        dbc.Button(
-                                            "Submit", id="close", className="ms-auto", n_clicks=0
-                                        )
-                                    ),
-                                ],
-                                id="modal",
-                                is_open=False,
-                            ),
+                            settings_modal,
+                            dbc.Col(["Upload Power dissipation files"]),
+                            upload_component,
+                            ], width=3),
+                    dbc.Col([
+                        dbc.Card([
+                            dbc.Row([
+                                dbc.Col([
+                                ], width=6, id="scenario"),
+                                dbc.Card([dbc.Col(["Visualization"])],)]),
+                            dbc.Card(
+                                [dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),])
                         ])
-                    ], width=2),
-                    dbc.Row([
-                        dbc.Col(["table of scenarios"], width=1),
-                        dbc.Col(["Visualization"], width=1)
-                    ],
-                    )]
-                    ), label="Thermal Simulation"),
-        dbc.Tab("ML flow", label="Machine Learning")]),
+                    ], width=9),
+
+                    ]), label="Thermal Simulation"),
+        dbc.Tab("ML flow", label="Machine Learning")
+    ]),
 ])
 
+# @app.callback(Output('output-data-upload', 'children'),
+#               Input('upload-data', 'contents'),
+#               State('upload-data', 'filename'),
+#               State('upload-data', 'last_modified'))
+# def update_output(list_of_contents, list_of_names, list_of_dates):
+#     print(list_of_names)
+#     return list_of_names
 
 # @app.callback(
 #     Output("modal", "is_open"),
@@ -202,6 +232,16 @@ app.layout = dbc.Container([
 #     if n1 or n2:
 #         return not is_open
 #     return is_open
+
+
+@app.callback(
+    Output("scenario", "children"),
+    [Input("pagination", "active_page")],
+)
+def change_page(page):
+    if page:
+        return f"Page selected: {page}"
+    return "Select a page"
 
 
 if __name__ == "__main__":

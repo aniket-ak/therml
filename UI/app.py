@@ -4,6 +4,10 @@ from dash import dcc
 from dash import Input, Output, State, html
 from dash.dependencies import Input, Output
 import pandas as pd
+import plotly.express as px
+import numpy as np
+
+df_tables = pd.DataFrame()
 
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
@@ -209,7 +213,7 @@ app.layout = dbc.Container([
                             dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col(html.H4("Visualization"),width=6)]),
                             dbc.Row([
                                 dbc.Col([], width=6, id="scenario"),
-                                dbc.Col([], width=6),
+                                dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ]),
                         html.Hr(),
                         dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),
@@ -226,23 +230,25 @@ app.layout = dbc.Container([
               State('upload-data', 'filename'))
 def update_output(content, list_of_names):
     if list_of_names is not None:
-        df = pd.DataFrame()
-        df["Scenario"] = list_of_names
-        df["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
-        df["Progress"] = [dbc.Progress(value=10, striped=True) for i in list_of_names]
-        df["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize") for (i,name) in enumerate(list_of_names)]
+        global df_tables
+        df_tables = pd.DataFrame()
+        df_tables["Scenario"] = list_of_names
+        df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
+        df_tables["Progress"] = [dbc.Progress(value=10, striped=True) for i in list_of_names]
+        df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize"+str(i)) for (i,name) in enumerate(list_of_names)]
     else:
-        df = pd.DataFrame()
-    table_ = dbc.Table.from_dataframe(df, striped=True, bordered=True, hover=True)
+        df_tables = pd.DataFrame()
+    table_ = dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)
     return table_
 
 @app.callback(
-    Output("visualize", "is_open"),
-    Input("scenario", "contents"),
-)
-def toggle_modal(contents):
-    print(contents)
-    return 1
+    Output("contour", "figure"), 
+    [Input("visualize"+str(i), "n_clicks") for i in range(df_tables.shape[0]+1)])
+def filter_heatmap(n_clicks):
+    # print("df", df_tables)
+    matrix = np.zeros((4,4))
+    fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
+    return fig
 
 # @app.callback(
 #     Output("modal", "is_open"),

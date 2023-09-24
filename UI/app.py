@@ -6,6 +6,7 @@ from dash.dependencies import Input, Output
 import pandas as pd
 import plotly.express as px
 import numpy as np
+import os
 
 df_tables = pd.DataFrame()
 
@@ -226,7 +227,7 @@ app.layout = dbc.Container([
 ])
 
 @app.callback(Output('scenario', 'children'),
-              Input('upload-data', 'contents'),
+              Input('upload-data', 'filename'),
               State('upload-data', 'filename'))
 def update_output(content, list_of_names):
     if list_of_names is not None:
@@ -236,29 +237,52 @@ def update_output(content, list_of_names):
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
         df_tables["Progress"] = [dbc.Progress(value=10, striped=True) for i in list_of_names]
         df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize"+str(i)) for (i,name) in enumerate(list_of_names)]
+        df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate"+str(i)) for (i,name) in enumerate(list_of_names)]
     else:
         df_tables = pd.DataFrame()
+        df_tables["Scenario"] = ["None"]
+        df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id={"type": "visualize", "index": i},) for (i,name) in enumerate(["None"])]
     table_ = dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)
     return table_
 
+# @app.callback(
+#     Output("contour", "figure"), 
+#     [Input("visualize"+str(i), "n_clicks") for i in range(df_tables.shape[0]+1)])
+# def filter_heatmap(n_clicks):
+#     global df_tables
+#     path = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios"
+#     csv_ = os.path.join(path, df_tables["Scenario"][0])
+#     matrix = pd.read_csv(csv_)
+#     fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
+    
+#     return fig
+
+from dash import ALL
 @app.callback(
     Output("contour", "figure"), 
-    [Input("visualize"+str(i), "n_clicks") for i in range(df_tables.shape[0]+1)])
+    Input({"type": "visualize", "index": ALL}, "value"))
 def filter_heatmap(n_clicks):
-    # print("df", df_tables)
-    matrix = np.zeros((4,4))
-    fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
+    print("button", n_clicks)
+    global df_tables
+    path = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios"
+    csv_ = os.path.join(path, df_tables["Scenario"][0])
+    if os.path.exists(csv_):
+        matrix = pd.read_csv(csv_)
+        fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
+    else:
+        fig = px.area()
+    
     return fig
 
-# @app.callback(
-#     Output("modal", "is_open"),
-#     [Input("open", "n_clicks"), Input("close", "n_clicks")],
-#     [State("modal", "is_open")],
-# )
-# def toggle_modal(n1, n2, is_open):
-#     if n1 or n2:
-#         return not is_open
-#     return is_open
+@app.callback(
+    Output("modal", "is_open"),
+    [Input("open", "n_clicks"), Input("close", "n_clicks")],
+    [State("modal", "is_open")],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
 
 
 # @app.callback(

@@ -11,7 +11,7 @@ import os
 df_tables = pd.DataFrame()
 
 app = dash.Dash(
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=[dbc.themes.DARKLY],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1.1"},
     ],
@@ -94,7 +94,7 @@ left_accordion = dbc.Accordion([
     ], title="Geometry and Model"),
     dbc.AccordionItem([
         html.Label("Top BC"),
-        dcc.Dropdown(id="top-bc", options=[
+        dbc.Select(id="top-bc", options=[
             {"label": "Insulated", "value": "insulated"},
             {"label": "Const. T", "value": "const_T"},
             {"label": "Const. HTC", "value": "const_h"},
@@ -105,7 +105,7 @@ left_accordion = dbc.Accordion([
         ]),
 
         html.Label("Bottom BC"),
-        dcc.Dropdown(id="bottom-bc", options=[
+        dbc.Select(id="bottom-bc", options=[
             {"label": "Insulated", "value": "insulated"},
             {"label": "Const. T", "value": "const_T"},
             {"label": "Const. HTC", "value": "const_h"},
@@ -226,7 +226,7 @@ app.layout = dbc.Container([
     ]),
 ])
 
-@app.callback(Output('scenario', 'children'),
+@app.callback(Output('scenario', 'children'),Output('visualization', 'children'),
               Input('upload-data', 'filename'),
               State('upload-data', 'filename'))
 def update_output(content, list_of_names):
@@ -236,14 +236,24 @@ def update_output(content, list_of_names):
         df_tables["Scenario"] = list_of_names
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
         df_tables["Progress"] = [dbc.Progress(value=10, striped=True) for i in list_of_names]
-        df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize"+str(i)) for (i,name) in enumerate(list_of_names)]
+        # df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize"+str(i)) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate"+str(i)) for (i,name) in enumerate(list_of_names)]
+        children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
     else:
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = ["None"]
-        df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id={"type": "visualize", "index": i},) for (i,name) in enumerate(["None"])]
+        # df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id={"type": "visualize", "index": i},) for (i,name) in enumerate(["None"])]
+        children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
     table_ = dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)
-    return table_
+    
+    return table_, children
+
+@app.callback(Output('contour', 'figure'),
+              Input('viz_dropdown', 'children'))
+def update_output(name):
+    print(name)
+
+    return None
 
 # @app.callback(
 #     Output("contour", "figure"), 
@@ -256,23 +266,6 @@ def update_output(content, list_of_names):
 #     fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
     
 #     return fig
-
-from dash import ALL
-@app.callback(
-    Output("contour", "figure"), 
-    Input({"type": "visualize", "index": ALL}, "value"))
-def filter_heatmap(n_clicks):
-    print("button", n_clicks)
-    global df_tables
-    path = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios"
-    csv_ = os.path.join(path, df_tables["Scenario"][0])
-    if os.path.exists(csv_):
-        matrix = pd.read_csv(csv_)
-        fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
-    else:
-        fig = px.area()
-    
-    return fig
 
 @app.callback(
     Output("modal", "is_open"),

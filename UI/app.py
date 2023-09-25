@@ -211,13 +211,16 @@ app.layout = dbc.Container([
                             upload_component,
                             ], width=3),
                     dbc.Col([
-                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col(html.H4("Visualization"),width=6)]),
+                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([
+                                    dbc.Select(options=[{"label":i,"value":i} for i in ["None"]], id="viz_dropdown")
+                                    ], width=6, id="dropdowns"),]),
+                            
                             dbc.Row([
                                 dbc.Col([], width=6, id="scenario"),
                                 dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ]),
-                        html.Hr(),
-                        dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),
+                            html.Hr(),
+                            dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),
                         
                     ], width=9),
 
@@ -226,7 +229,7 @@ app.layout = dbc.Container([
     ]),
 ])
 
-@app.callback(Output('scenario', 'children'),Output('visualization', 'children'),
+@app.callback(Output('scenario', 'children'),Output('dropdowns', 'children'),
               Input('upload-data', 'filename'),
               State('upload-data', 'filename'))
 def update_output(content, list_of_names):
@@ -249,11 +252,22 @@ def update_output(content, list_of_names):
     return table_, children
 
 @app.callback(Output('contour', 'figure'),
-              Input('viz_dropdown', 'children'))
+              Input('viz_dropdown', 'value'))
 def update_output(name):
-    print(name)
+    import time
+    time.sleep(1)
 
-    return None
+    if name is not None:
+        path = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios"
+        csv_ = os.path.join(path, name)
+        matrix = pd.read_csv(csv_, header=None).values
+        fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
+        fig['layout']['yaxis']['autorange'] = "reversed"
+        
+        # fig = px.imshow(matrix)
+    else:
+        fig = px.area()
+    return fig
 
 # @app.callback(
 #     Output("contour", "figure"), 

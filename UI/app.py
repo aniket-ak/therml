@@ -7,11 +7,12 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 import os
+from dash import dash_table
 
 df_tables = pd.DataFrame()
 
 app = dash.Dash(
-    external_stylesheets=[dbc.themes.DARKLY],
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
     meta_tags=[
         {"name": "viewport", "content": "width=device-width, initial-scale=1.1"},
     ],
@@ -198,6 +199,14 @@ upload_component = dcc.Upload(
     multiple=True
 )
 
+table_ = dash_table.DataTable(id='datatable-paging',
+                columns=[
+                    {"name": i, "id": i} for i in sorted(df_tables.columns)
+                ],
+                page_current=0,
+                page_size=10,
+                page_action='custom')
+
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
@@ -216,7 +225,7 @@ app.layout = dbc.Container([
                                     ], width=6, id="dropdowns"),]),
                             
                             dbc.Row([
-                                dbc.Col([], width=6, id="scenario"),
+                                dbc.Col([table_], width=6, id="scenario"),
                                 dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ]),
                             html.Hr(),
@@ -229,10 +238,14 @@ app.layout = dbc.Container([
     ]),
 ])
 
-@app.callback(Output('scenario', 'children'),Output('dropdowns', 'children'),
+@app.callback(Output('scenario', 'children'),
+              Output('dropdowns', 'children'),
+              Output('datatable-paging', 'data'),
               Input('upload-data', 'filename'),
-              State('upload-data', 'filename'))
-def update_output(content, list_of_names):
+              State('upload-data', 'filename'),
+              Input('datatable-paging','page-current'),
+              Input('datatable-paging','page-size'))
+def update_output(content, list_of_names, page_current, size):
     if list_of_names is not None:
         global df_tables
         df_tables = pd.DataFrame()
@@ -245,11 +258,21 @@ def update_output(content, list_of_names):
     else:
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = ["None"]
+        df_tables["Status"] = ["None"]
+        df_tables["Progress"] = ["None"]
         # df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id={"type": "visualize", "index": i},) for (i,name) in enumerate(["None"])]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
-    table_ = dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)
+    #table_ = dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)
     
-    return table_, children
+    table_ = dash_table.DataTable(id='datatable-paging',
+                columns=[
+                    {"name": i, "id": i} for i in sorted(df_tables.columns)
+                ],
+                page_current=page_current,
+                page_size=10,
+                page_action='custom')
+    
+    return table_, children, df_tables.iloc[page_current*10:(page_current+ 1)*10].to_dict('records')
 
 @app.callback(Output('contour', 'figure'),
               Input('viz_dropdown', 'value'))
@@ -262,9 +285,6 @@ def update_output(name):
         csv_ = os.path.join(path, name)
         matrix = pd.read_csv(csv_, header=None).values
         fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
-        fig['layout']['yaxis']['autorange'] = "reversed"
-        
-        # fig = px.imshow(matrix)
     else:
         fig = px.area()
     return fig

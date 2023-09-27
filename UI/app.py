@@ -9,7 +9,11 @@ import numpy as np
 import os
 from dash import dash_table
 
-df_tables = pd.DataFrame()
+df_tables = pd.DataFrame([["None"]*4],columns=["Scenario", "Status", "Progress","Simulate"])
+df_tables["Scenario"] = ["None"]
+df_tables["Status"] = ["None"]
+df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id="progress0")]
+df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate0",disabled=True)]
 
 app = dash.Dash(
     external_stylesheets=[dbc.themes.BOOTSTRAP],
@@ -199,14 +203,6 @@ upload_component = dcc.Upload(
     multiple=True
 )
 
-table_ = dash_table.DataTable(id='datatable-paging',
-                columns=[
-                    {"name": i, "id": i} for i in sorted(df_tables.columns)
-                ],
-                page_current=0,
-                page_size=10,
-                page_action='custom')
-
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
@@ -225,7 +221,7 @@ app.layout = dbc.Container([
                                     ], width=6, id="dropdowns"),]),
                             
                             dbc.Row([
-                                dbc.Col([table_], width=6, id="scenario"),
+                                dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=6, id="scenario"),
                                 dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ]),
                             html.Hr(),
@@ -238,41 +234,38 @@ app.layout = dbc.Container([
     ]),
 ])
 
+
 @app.callback(Output('scenario', 'children'),
               Output('dropdowns', 'children'),
-              Output('datatable-paging', 'data'),
+              Output('pagination', 'max_value'),
               Input('upload-data', 'filename'),
               State('upload-data', 'filename'),
-              Input('datatable-paging','page-current'),
-              Input('datatable-paging','page-size'))
-def update_output(content, list_of_names, page_current, size):
+              Input('pagination', 'active_page'))
+def update_output(content, list_of_names, active_page):
     if list_of_names is not None:
         global df_tables
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = list_of_names
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
-        df_tables["Progress"] = [dbc.Progress(value=10, striped=True) for i in list_of_names]
-        # df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id="visualize"+str(i)) for (i,name) in enumerate(list_of_names)]
+        df_tables["Progress"] = [dbc.Progress(value=10, striped=True, id="progress"+str(i)) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate"+str(i)) for (i,name) in enumerate(list_of_names)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
     else:
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = ["None"]
         df_tables["Status"] = ["None"]
-        df_tables["Progress"] = ["None"]
-        # df_tables["Visualize"] = [dbc.Button("Visualize", color="primary", className="me-1", id={"type": "visualize", "index": i},) for (i,name) in enumerate(["None"])]
+        df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id="progress0")]
+        df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate0",disabled=True)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
-    #table_ = dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)
     
-    table_ = dash_table.DataTable(id='datatable-paging',
-                columns=[
-                    {"name": i, "id": i} for i in sorted(df_tables.columns)
-                ],
-                page_current=page_current,
-                page_size=10,
-                page_action='custom')
+    if active_page is not None:
+        table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
+    else:
+        table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
+
+    max_value = int(df_tables.shape[0]/10)+1
     
-    return table_, children, df_tables.iloc[page_current*10:(page_current+ 1)*10].to_dict('records')
+    return table_, children, max_value
 
 @app.callback(Output('contour', 'figure'),
               Input('viz_dropdown', 'value'))
@@ -289,17 +282,13 @@ def update_output(name):
         fig = px.area()
     return fig
 
-# @app.callback(
-#     Output("contour", "figure"), 
-#     [Input("visualize"+str(i), "n_clicks") for i in range(df_tables.shape[0]+1)])
-# def filter_heatmap(n_clicks):
-#     global df_tables
-#     path = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios"
-#     csv_ = os.path.join(path, df_tables["Scenario"][0])
-#     matrix = pd.read_csv(csv_)
-#     fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
-    
-#     return fig
+@app.callback(
+    [Output("progress"+str(i), "value") for i in range(df_tables.shape[0])], 
+    [Input("simulate"+str(i), "n_clicks") for i in range(df_tables.shape[0])])
+def filter_heatmap(n_clicks):
+    print(n_clicks)
+
+    return [("progress3", 50)]
 
 @app.callback(
     Output("modal", "is_open"),

@@ -1,13 +1,13 @@
 import dash
 import dash_bootstrap_components as dbc
 from dash import dcc
-from dash import Input, Output, State, html
+from dash import Input, Output, State, html, ctx, ALL
 from dash.dependencies import Input, Output
 import pandas as pd
 import plotly.express as px
 import numpy as np
 import os
-from dash import dash_table
+from dash.exceptions import PreventUpdate
 
 df_tables = pd.DataFrame()
 df_tables["Scenario"] = ["None"]
@@ -23,6 +23,8 @@ app = dash.Dash(
 )
 # app.stylesheets.serve_locally=True
 app.scripts.serve_locally = True
+app._favicon = "favicon.ico"
+app.title = "therML"
 
 header = html.H1(
     "MarlinSim TherML"
@@ -150,6 +152,7 @@ settings_modal = dbc.Modal([
 
 navbar = dbc.NavbarSimple(
     children=[
+
         dbc.DropdownMenu(
             children=[
                 dbc.DropdownMenuItem("New Project"),
@@ -247,8 +250,8 @@ def update_output(content, list_of_names, active_page):
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = list_of_names
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
-        df_tables["Progress"] = [dbc.Progress(value=10, striped=True, id="progress"+str(i)) for (i,name) in enumerate(list_of_names)]
-        df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate"+str(i)) for (i,name) in enumerate(list_of_names)]
+        df_tables["Progress"] = [dbc.Progress(value=10, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
+        df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
     else:
         df_tables = pd.DataFrame()
@@ -283,12 +286,18 @@ def update_output(name):
     return fig
 
 @app.callback(
-    [Output("progress"+str(i), "value") for i in range(df_tables.shape[0])], 
-    [Input("simulate"+str(i), "n_clicks") for i in range(df_tables.shape[0])])
+    Output({"type": "progress", "index": ALL}, "value"), 
+    Input({"type": "simulate", "index": ALL}, "n_clicks"))
 def filter_heatmap(n_clicks):
-    print(n_clicks)
+    if len(n_clicks) < 1:
+        raise PreventUpdate
+    n_clicks = ctx.triggered[0]["value"]
+    if not n_clicks:
+        raise PreventUpdate
+    button_id = ctx.triggered_id.index
+    print(n_clicks, button_id)
 
-    return [("progress3", 50)]
+    return [i*10 for i in range(len(ctx.inputs.keys()))]
 
 @app.callback(
     Output("modal", "is_open"),

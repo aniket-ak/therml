@@ -9,7 +9,7 @@ import numpy as np
 import os
 from dash import dash_table
 
-df_tables = pd.DataFrame([["None"]*4],columns=["Scenario", "Status", "Progress","Simulate"])
+df_tables = pd.DataFrame()
 df_tables["Scenario"] = ["None"]
 df_tables["Status"] = ["None"]
 df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id="progress0")]
@@ -242,8 +242,8 @@ app.layout = dbc.Container([
               State('upload-data', 'filename'),
               Input('pagination', 'active_page'))
 def update_output(content, list_of_names, active_page):
+    global df_tables
     if list_of_names is not None:
-        global df_tables
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = list_of_names
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]

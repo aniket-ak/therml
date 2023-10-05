@@ -4,7 +4,7 @@ import plotly.express as px
 import pandas as pd
 
 import h5py
-file1 = "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/solution.jld"
+file1 = "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/solution.sol"
 f = h5py.File(file1, "r")
 
 time_duration = len(f['solution'].keys())
@@ -16,3 +16,4 @@ for i in range(1,time_duration):
     solution[i,:] = np.array(list(f['solution'][str(i)])).T
 
 plt.matshow(solution[-1,:,:,1])
+plt.show()

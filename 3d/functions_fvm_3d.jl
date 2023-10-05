@@ -284,8 +284,8 @@ function interpolate_(x,y,z,new_x,new_y)
 end
 
 function save_fields(sol)
-    jldopen("solution.jld", "w") do file
-        g = create_group(file, "solution")
+    h5open("solution.sol", "w") do file
+        g = HDF5.create_group(file, "solution")
 
         for (i,t) in enumerate(sol.t)
             g[string(i)] = sol.u[i]

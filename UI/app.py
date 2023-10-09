@@ -244,12 +244,13 @@ app.layout = dbc.Container([
               Input('upload-data', 'filename'),
               State('upload-data', 'filename'),
               Input('pagination', 'active_page'))
-def update_output(content, list_of_names, active_page):
+def update_output(list_of_names, list_of_names1, active_page):
     global df_tables
     if list_of_names is not None:
         df_tables = pd.DataFrame()
-        df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)] #list_of_names
+        df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
+        # TODO - Save the dataframe state to a file and read it here for the progress to be overwritten every time pagination click happens
         df_tables["Progress"] = [dbc.Progress(value=10, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
@@ -261,10 +262,13 @@ def update_output(content, list_of_names, active_page):
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate0",disabled=True)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
     
-    if active_page is not None:
+    if active_page is None and list_of_names is not None:
+        active_page=1
         table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
-    else:
+    elif active_page is None and list_of_names is None:
         table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
+    else:
+        table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
 
     max_value = int(df_tables.shape[0]/10)+1
     
@@ -289,20 +293,23 @@ def update_output(name):
     Output({"type": "progress", "index": ALL}, "value"), 
     Input({"type": "simulate", "index": ALL}, "n_clicks"),
     Input({"type": "progress", "index": ALL}, "value"),
-    Input({"type": "scenario", "index": ALL}, "children"))
-def filter_heatmap(n_clicks, values, children):
-    # global df_tables
+    Input({"type": "scenario", "index": ALL}, "children"),
+    State('pagination', 'active_page'))
+def filter_heatmap(n_clicks, values, children, active_page):
     if len(n_clicks) < 1:
         raise PreventUpdate
     n_clicks = ctx.triggered[0]["value"]
     if not n_clicks:
         raise PreventUpdate
     button_id = ctx.triggered_id.index
-    print(n_clicks, button_id)
-    print(values)
+    if active_page is None:
+        active_page=1
+    # if isinstance(button_id, int):
+    #     print(n_clicks,button_id, active_page, button_id-(active_page-1)*10)
     mod_values = values
-    mod_values[button_id] = 20
-    print(children)
+    if isinstance(button_id, int):
+        mod_values[button_id-(active_page-1)*10] = 20
+    # print(children)
 
     return mod_values
 

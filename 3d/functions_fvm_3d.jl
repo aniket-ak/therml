@@ -121,7 +121,6 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     rho = settings["model"]["bodies"]["die"]["material"]["rho"]
     cp = settings["model"]["bodies"]["die"]["material"]["cp"]
 
-    ## TODO convert the bc application to 3d
     # At X-
     side = "X-"
     if settings["BC"]["X-"]["type"] == "constant_T"

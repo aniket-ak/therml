@@ -1,24 +1,47 @@
-from dash import Dash, html, dcc, callback, Output, Input
-import plotly.express as px
+import dash
+from dash import dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
+import dash_table
 import pandas as pd
+import io
+import base64
+import os
 
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder_unfiltered.csv')
-
-app = Dash(__name__)
+app = dash.Dash(__name__)
 
 app.layout = html.Div([
-    html.H1(children='Title of Dash App', style={'textAlign':'center'}),
-    dcc.Dropdown(df.country.unique(), 'Canada', id='dropdown-selection'),
-    dcc.Graph(id='graph-content')
+    html.Label("Choose Folder:"),
+    dcc.Input(id='file-input', type='file', multiple=True)
 ])
 
-@callback(
-    Output('graph-content', 'figure'),
-    Input('dropdown-selection', 'value')
+
+@app.callback(
+    Output('store-uploaded-data', 'data'),
+    Input('file-input', 'value')
 )
-def update_graph(value):
-    dff = df[df.country==value]
-    return px.line(dff, x='year', y='pop')
+def store_files(directory_content):
+    # Handle the files from the directory here
+    # For simplicity, let's assume these are text files and just store their content.
+    # For larger files or a more complex directory structure, you'd adjust this accordingly.
+    stored_data = {}
+    if directory_content:
+        for file in directory_content:
+            # Convert file content to string
+            stored_data[file.filename] = file.read().decode('utf-8')
+    return stored_data
+
+
+@app.callback(
+    Output('output-folder-upload', 'children'),
+    Input('process-button', 'n_clicks'),
+    State('store-uploaded-data', 'data')
+)
+def update_output(n_clicks, stored_data):
+    if n_clicks and stored_data:
+        children = [html.Div([html.H5(filename), html.Pre(content)]) for filename, content in stored_data.items()]
+        return children
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run_server(debug=True, port=8052)

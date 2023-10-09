@@ -248,7 +248,7 @@ def update_output(content, list_of_names, active_page):
     global df_tables
     if list_of_names is not None:
         df_tables = pd.DataFrame()
-        df_tables["Scenario"] = list_of_names
+        df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)] #list_of_names
         df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
         df_tables["Progress"] = [dbc.Progress(value=10, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
@@ -287,8 +287,11 @@ def update_output(name):
 
 @app.callback(
     Output({"type": "progress", "index": ALL}, "value"), 
-    Input({"type": "simulate", "index": ALL}, "n_clicks"))
-def filter_heatmap(n_clicks):
+    Input({"type": "simulate", "index": ALL}, "n_clicks"),
+    Input({"type": "progress", "index": ALL}, "value"),
+    Input({"type": "scenario", "index": ALL}, "children"))
+def filter_heatmap(n_clicks, values, children):
+    # global df_tables
     if len(n_clicks) < 1:
         raise PreventUpdate
     n_clicks = ctx.triggered[0]["value"]
@@ -296,8 +299,12 @@ def filter_heatmap(n_clicks):
         raise PreventUpdate
     button_id = ctx.triggered_id.index
     print(n_clicks, button_id)
+    print(values)
+    mod_values = values
+    mod_values[button_id] = 20
+    print(children)
 
-    return [i*10 for i in range(len(ctx.inputs.keys()))]
+    return mod_values
 
 @app.callback(
     Output("modal", "is_open"),

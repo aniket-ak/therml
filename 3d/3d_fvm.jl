@@ -29,7 +29,8 @@ with_logger(logger) do
     @info "======== MarlinSim therML solver ========"
 end
 
-global_logger(TerminalLogger())
+progress_file = open("progress.txt", "w")
+global_logger(TerminalLogger(progress_file))
 
 include("./functions_fvm_3d.jl")
 

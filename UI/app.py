@@ -338,25 +338,13 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
     button_id = ctx.triggered_id.index
     if active_page is None:
         active_page=1
-    # if isinstance(button_id, int):
-    #     print(n_clicks,button_id, active_page, button_id-(active_page-1)*10)
+    
     mod_values = values
     if isinstance(button_id, int):
-        mod_values[button_id-(active_page-1)*10] = 20
-    # print(working_dir)
-    # print(children[button_id][0])
+        mod_values[button_id-(active_page-1)*10] = 100
+    
     power_file = os.path.join(working_dir, children[button_id][0])
     print("Executing power file - ", power_file)
-    # import sys
-    # subprocess.run(["julia", "-t 4 -power", power_file])
-    # p = subprocess.Popen(["julia", "-t 4 -power", power_file], shell=True, stdout=subprocess.PIPE)
-    # while True:
-    #     print ("Looping")
-    #     line = p.stdout.readline()
-    #     if not line:
-    #         break
-    #     print (line.strip())
-    #     sys.stdout.flush()
     if simulation_name is None:
         simulation_name = random_name
     result = subprocess.run(["julia", "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/3d_fvm.jl", 
@@ -367,7 +355,6 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
     if result.returncode != 0:
         print("Error:", result.stderr)
         return None
-    print(result.stdout.strip())
 
     return mod_values
 

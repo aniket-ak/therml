@@ -17,19 +17,15 @@ working_dir = ARGS[4]
 scenario_name = ARGS[6]
 run_name = ARGS[8]
 
+installation_dir = ENV["THERML"]
+
 if run_name == ""
     run_name = now()
 end
 
 # julia -t 4 -working_dir "./" -scenario_name "name" -run_name "run1"
-
-logger = FileLogger(joinpath(working_dir, run_name*"logfile.txt"))
-
-with_logger(logger) do
-    @info "======== MarlinSim therML solver ========"
-end
-
-progress_file = open("progress.txt", "w")
+run_wd = joinpath(working_dir, run_name)
+progress_file = open(joinpath(run_wd, "progress.txt"), "w")
 global_logger(TerminalLogger(progress_file))
 
 include("./functions_fvm_3d.jl")

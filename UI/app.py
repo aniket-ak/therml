@@ -240,24 +240,27 @@ app.layout = dbc.Container([
         dbc.Tab(
             dbc.Row([
                     dbc.Col([
-                            dbc.Button("Settings", id="open", n_clicks=0),
+                            dbc.Row([dbc.Col([dbc.Label("Model Settings")]), 
+                                     dbc.Col([dbc.Button("Settings", id="open", n_clicks=0),])
+                                     ],style={"margin-top": "30px"}),
                             settings_modal,
+                            dbc.Label("Select the working directory"),
+                            dbc.Input(placeholder="Working Directory", type="text", id="working_dir", required=True),
                             dbc.Col(["Upload Power dissipation files"]),
                             upload_component,
-                            dbc.Label("Select the working directory"),
-                            dbc.Input(placeholder="Working Directory", type="text", id="working_dir"),
                             dbc.Label("Enter a name for simulation"),
                             dbc.Input(placeholder=random_name, type="text", id="simulation_name")
                             ], width=3),
                     dbc.Col([
-                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([
+                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), 
+                                     dbc.Col([
                                     dbc.Select(options=[{"label":i,"value":i} for i in ["None"]], id="viz_dropdown")
-                                    ], width=6, id="dropdowns"),]),
+                                    ], width=6, id="dropdowns"),],style={"margin-top": "30px"}),
                             
                             dbc.Row([
                                 dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=6, id="scenario"),
                                 dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
-                            ]),
+                            ],style={"margin-top": "30px"}),
                             html.Hr(),
                             dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),
                         
@@ -330,6 +333,17 @@ def update_output(name):
     State('working_dir', 'value'),
     State('simulation_name', 'value'))
 def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulation_name):
+    if simulation_name is None:
+        simulation_name = random_name
+    
+    output_dir = os.path.join(working_dir,simulation_name)
+    log_dir = os.mkdir(os.path.join(output_dir, "Logs"))
+    sol_dir = os.mkdir(os.path.join(output_dir, "Solution"))
+    temp_dir = os.mkdir(os.path.join(output_dir, "Temp"))
+    os.mkdir(output_dir)
+    os.mkdir(log_dir)
+    os.mkdir(sol_dir)
+
     if len(n_clicks) < 1:
         raise PreventUpdate
     n_clicks = ctx.triggered[0]["value"]
@@ -345,8 +359,7 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
     
     power_file = os.path.join(working_dir, children[button_id][0])
     print("Executing power file - ", power_file)
-    if simulation_name is None:
-        simulation_name = random_name
+    
     result = subprocess.run(["julia", "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/3d_fvm.jl", 
                              "-t", "4", "-working_dir", working_dir, "-power", power_file, "-run_name", 
                              simulation_name], capture_output=True, text=True)
@@ -357,6 +370,17 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
         return None
 
     return mod_values
+
+
+@app.callback(
+    Output("working_dir", "invalid"),
+    Input("working_dir", "value")
+)
+def check_working_dir(dir):
+    if dir == "":
+        return True
+    else:
+        return False
 
 @app.callback(
     Output("modal", "is_open"),

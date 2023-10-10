@@ -34,7 +34,7 @@ function initialize_domain!(u0)
     return u0
 end
 
-function define_volume_sources(settings, Nx, Ny, Nz)
+function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
 
@@ -53,7 +53,7 @@ function define_volume_sources(settings, Nx, Ny, Nz)
     cell_centers_x = range(step(x_mesh)/2, stop = x_normalized-step(x_mesh)/2, length = Nx)
     cell_centers_y = range(step(y_mesh)/2, stop = x_normalized-step(y_mesh)/2, length = Ny)
 
-    heat_values = read_csv("./heat_sources.csv")
+    heat_values = read_csv(joinpath(working_dir,power_file))
     source_Nx, source_Ny = size(heat_values)
     source_x = range(0, x_normalized, source_Nx)
     source_y = range(0, y_normalized, source_Ny)

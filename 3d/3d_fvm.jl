@@ -10,24 +10,42 @@ using Logging: global_logger
 using TerminalLoggers: TerminalLogger
 using JLD2
 using HDF5
+using Logging
+using LoggingExtras
+
+working_dir = ARGS[4]
+scenario_name = ARGS[6]
+run_name = ARGS[8]
+
+if run_name == ""
+    run_name = now()
+end
+
+# julia -t 4 -working_dir "./" -scenario_name "name" -run_name "run1"
+
+logger = FileLogger(joinpath(working_dir, run_name*"logfile.txt"))
+
+with_logger(logger) do
+    @info "======== MarlinSim therML solver ========"
+end
 
 global_logger(TerminalLogger())
 
 include("./functions_fvm_3d.jl")
 
-fw = open("./run.log","w")
-
-f = open("/Users/aniket/Documents/MarlinSim/03_code/therml/3d/settings.json", "r")
+f = open(joinpath(working_dir,"settings.json"), "r")
 settings = JSON.parse(f)
 
 temperature_base_units = settings["units"]["temperature"]
 
 println(Dates.format(now(), "HH:MM:SS"))
 
-write(fw, "\n-----\n")
-write(fw, "Start time:", Dates.format(now(), "HH:MM:SS"),"\n")
+with_logger(logger) do
+    @info "\n-----\n"
+    @info "Start time: "*Dates.format(now(), "HH:MM:SS")*"\n"
+end
 
-function solve_()
+function solve_(working_dir, power_file)
 
     k = settings["model"]["bodies"]["die"]["material"]["k"]
     rho = settings["model"]["bodies"]["die"]["material"]["rho"]
@@ -37,7 +55,7 @@ function solve_()
 
     u0 = build_domain(Nx,Ny,Nz)
     
-    source = define_volume_sources(settings,Nx,Ny,Nz)
+    source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
     p = (source, k, rho, cp, (delta_x, delta_y, delta_z))
     u0 = initialize_domain!(u0)
@@ -52,9 +70,13 @@ function solve_()
     return sol
 end
 
-sol = solve_();
+sol = solve_(working_dir, scenario_name);
 
 println(Dates.format(now(), "HH:MM:SS"))
+with_logger(logger) do
+    @info "\n-----\n"
+    @info Dates.format(now(), "HH:MM:SS")*"\n"
+end
 
 do_plotting(sol, false);
 save_fields(sol);

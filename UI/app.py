@@ -7,7 +7,34 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 import os
+import subprocess
 from dash.exceptions import PreventUpdate
+import random
+
+
+first_names = ["Blue", "Red", "Green", "Yellow", "Orange", "Purple", "Silver", "Golden", "Ruby", "Sapphire", "Emerald", "Diamond",
+                "Amber", "Topaz", "Jade", "Pearl", "Opal", "Crimson", "Lavender", "Azure", "Cobalt", "Indigo", "Violet", "Magenta",
+                  "Turquoise", "Coral", "Platinum", "Bronze", "Titanium", "Graphite", "Quartz", "Onyx", "Ivory", "Ebony", "Obsidian",
+                    "Sardonyx", "Moonstone", "Peridot", "Aquamarine", "Citrine", "Garnet", "Agate", "Hematite", "Zircon", "Malachite", 
+                    "Rhodonite", "Carnelian", "Aventurine", "Selenite", "Beryl", "Chrysoprase", "Serpentine", "Fluorite", "Kyanite", 
+                    "Labradorite", "Amazonite", "Rhodochrosite", "Sunstone", "Turritella", "Unakite", "Flint", "Obsidian", "Lapis", "Apatite",
+                      "Azurite", "Calcite", "Jasper", "Moonstone", "Larimar", "Celestite", "Sugilite", "Charoite", "Pietersite", "Thulite", 
+                      "Howlite", "Dendritic", "Variscite", "Angelite", "Prehnite", "Septarian", "Pyrite", "Amethyst", "Kunzite", "Selenite", 
+                      "Cavansite", "Uvarovite", "Nuummite", "Chrysocolla", "Aragonite"]
+
+last_names = ["Lion", "Tiger", "Eagle", "Wolf", "Dragon", "Bear", "Falcon", "Fox", "Hawk", "Leopard", "Panther",
+               "Lynx", "Cheetah", "Cobra", "Serpent", "Phoenix", "Viper", "Raven", "Heron", "Hound", "Stallion", "Turtle",
+                 "Jaguar", "Puma", "Coyote", "Hedgehog", "Gazelle", "Kangaroo", "Zebra", "Ocelot", "Vulture", "Raccoon", "Penguin", 
+                 "Badger", "Dolphin", "Mongoose", "Koala", "Platypus", "Gorilla", "Ostrich", "Polarbear", "Piranha", "Jellyfish", 
+                 "Octopus", "Squirrel", "Seagull", "Shark", "Crab", "Pelican", "Seahorse", "Owl", "Peacock", "Sloth", "Walrus", "Komodo", 
+                 "Anaconda", "Armadillo", "Bison", "Buffalo", "Camel", "Cockatoo", "Dalmatian", "Dingo", "Elephant", "Ferret", "Giraffe", 
+                 "Hamster", "Iguana", "Kookaburra", "Llama", "Meerkat", "Narwhal", "Panda", "Rattlesnake", "Salamander", "Sloth", "Tapir", 
+                 "Wombat", "Yak", "Zorilla", "Bobcat", "Chameleon", "Firefly", "Jaguarundi", "Lemur", "Mantis", "Ocelot", "Platypus", "Scorpion",
+                   "Squid", "Tarsier"]
+
+random_first_name = random.choice(first_names)
+random_last_name = random.choice(last_names)
+random_name = random_first_name + "_" + random_last_name
 
 df_tables = pd.DataFrame()
 df_tables["Scenario"] = ["None"]
@@ -217,6 +244,10 @@ app.layout = dbc.Container([
                             settings_modal,
                             dbc.Col(["Upload Power dissipation files"]),
                             upload_component,
+                            dbc.Label("Select the working directory"),
+                            dbc.Input(placeholder="Working Directory", type="text", id="working_dir"),
+                            dbc.Label("Enter a name for simulation"),
+                            dbc.Input(placeholder=random_name, type="text", id="simulation_name")
                             ], width=3),
                     dbc.Col([
                             dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([
@@ -268,6 +299,7 @@ def update_output(list_of_names, list_of_names1, active_page):
     elif active_page is None and list_of_names is None:
         table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
     else:
+        # TODO - Cleanup logic here
         table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
 
     max_value = int(df_tables.shape[0]/10)+1
@@ -294,8 +326,10 @@ def update_output(name):
     Input({"type": "simulate", "index": ALL}, "n_clicks"),
     Input({"type": "progress", "index": ALL}, "value"),
     Input({"type": "scenario", "index": ALL}, "children"),
-    State('pagination', 'active_page'))
-def filter_heatmap(n_clicks, values, children, active_page):
+    State('pagination', 'active_page'),
+    State('working_dir', 'value'),
+    State('simulation_name', 'value'))
+def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulation_name):
     if len(n_clicks) < 1:
         raise PreventUpdate
     n_clicks = ctx.triggered[0]["value"]
@@ -309,7 +343,31 @@ def filter_heatmap(n_clicks, values, children, active_page):
     mod_values = values
     if isinstance(button_id, int):
         mod_values[button_id-(active_page-1)*10] = 20
-    # print(children)
+    # print(working_dir)
+    # print(children[button_id][0])
+    power_file = os.path.join(working_dir, children[button_id][0])
+    print("Executing power file - ", power_file)
+    # import sys
+    # subprocess.run(["julia", "-t 4 -power", power_file])
+    # p = subprocess.Popen(["julia", "-t 4 -power", power_file], shell=True, stdout=subprocess.PIPE)
+    # while True:
+    #     print ("Looping")
+    #     line = p.stdout.readline()
+    #     if not line:
+    #         break
+    #     print (line.strip())
+    #     sys.stdout.flush()
+    if simulation_name is None:
+        simulation_name = random_name
+    result = subprocess.run(["julia", "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/3d_fvm.jl", 
+                             "-t", "4", "-working_dir", working_dir, "-power", power_file, "-run_name", 
+                             simulation_name], capture_output=True, text=True)
+    
+    # Check for errors
+    if result.returncode != 0:
+        print("Error:", result.stderr)
+        return None
+    print(result.stdout.strip())
 
     return mod_values
 

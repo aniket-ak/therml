@@ -337,9 +337,9 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
         simulation_name = random_name
     
     output_dir = os.path.join(working_dir,simulation_name)
-    log_dir = os.mkdir(os.path.join(output_dir, "Logs"))
-    sol_dir = os.mkdir(os.path.join(output_dir, "Solution"))
-    temp_dir = os.mkdir(os.path.join(output_dir, "Temp"))
+    log_dir = os.path.join(output_dir, "Logs")
+    sol_dir = os.path.join(output_dir, "Solution")
+    temp_dir = os.path.join(output_dir, "Temp")
     os.mkdir(output_dir)
     os.mkdir(log_dir)
     os.mkdir(sol_dir)

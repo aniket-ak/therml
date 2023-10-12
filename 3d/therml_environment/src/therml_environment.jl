@@ -1,4 +1,4 @@
-module therml
+module therml_environment
 
 using DifferentialEquations, LinearAlgebra, SparseArrays
 using PlotlyJS
@@ -26,10 +26,14 @@ function julia_main()::Cint
 end
 
 function real_main()
+    println(ARGS)
+    println("working_dir  ",ARGS[4])
     working_dir = ARGS[4]
+    println("scenario_name  ",ARGS[6])
     scenario_name = ARGS[6]
+    println("run name  ", ARGS[8])
     run_name = ARGS[8]
-    installation_dir = ENV["THERML"]
+    # installation_dir = ENV["THERML"]
 
     if run_name == ""
         run_name = now()
@@ -43,15 +47,17 @@ function real_main()
     progress_file = open(joinpath(temp_wd, scenario_name*"__progress.txt"), "w")
     global_logger(TerminalLogger(progress_file))
 
-    include("./functions_fvm_3d.jl")
+    include("/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/src/functions_fvm_3d.jl")
 
     f = open(joinpath(working_dir,"settings.json"), "r")
     settings = JSON.parse(f)
-    temperature_base_units = settings["units"]["temperature"]
     println(Dates.format(now(), "HH:MM:SS"))
-    sol = solve_(working_dir, scenario_name);
-    do_plotting(sol, false);
-    save_fields(sol);
+    # sol = solve_(working_dir, scenario_name);
+    sol = Base.invokelatest(solve_, working_dir, scenario_name, settings);
+    # do_plotting(sol, sol_wd, false);
+    Base.invokelatest(do_plotting, sol, sol_wd,false)
+    # save_fields(sol,sol_wd);
+    Base.invokelatest(save_fields, sol, sol_wd)
     println(Dates.format(now(), "HH:MM:SS"))
 end
 

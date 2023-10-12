@@ -28,7 +28,8 @@ function build_domain(Nx,Ny,Nz)
     return u
 end
 
-function initialize_domain!(u0)
+function initialize_domain!(u0, settings)
+    temperature_base_units = settings["units"]["temperature"]
     T_initial = convert_units("temperature", settings["IC"], temperature_base_units, "K")
     u0 = u0 .+ T_initial
     return u0
@@ -63,7 +64,7 @@ function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
     return source
 end
 
-function do_plotting(sol, interpolation)
+function do_plotting(sol, sol_wd, interpolation)
     result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
@@ -95,7 +96,7 @@ function do_plotting(sol, interpolation)
             )
     end
 
-    open("./plot.html", "w") do io
+    open(joinpath(sol_wd,"./plot.html"), "w") do io
         PlotlyBase.to_html(io, p.plot)
     end
 end
@@ -213,7 +214,7 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    source, k, rho, cp, (delta_x, delta_y, delta_z) = p
+    source, k, rho, cp, (delta_x, delta_y, delta_z), settings = p
     alpha_x = (k/(rho*cp)) / delta_x^2
     alpha_y = (k/(rho*cp)) / delta_y^2
     alpha_z = (k/(rho*cp)) / delta_z^2
@@ -252,7 +253,7 @@ function configure_problem_klu!(u0,p)
     return prob_conduction_3d_sparse, algorithm
 end
 
-function configure_problem_ode!(u0,p)
+function configure_problem_ode!(u0,p,settings)
     start_time = settings["start_time"]
     end_time = settings["end_time"]
 
@@ -282,8 +283,8 @@ function interpolate_(x,y,z,new_x,new_y)
     return new_z
 end
 
-function save_fields(sol)
-    h5open("solution.sol", "w") do file
+function save_fields(sol,sol_wd)
+    h5open(joinpath(sol_wd,"solution.sol"), "w") do file
         g = HDF5.create_group(file, "solution")
 
         for (i,t) in enumerate(sol.t)
@@ -292,7 +293,7 @@ function save_fields(sol)
     end
 end
 
-function solve_(working_dir, power_file)
+function solve_(working_dir, power_file, settings)
 
     k = settings["model"]["bodies"]["die"]["material"]["k"]
     rho = settings["model"]["bodies"]["die"]["material"]["rho"]
@@ -304,13 +305,13 @@ function solve_(working_dir, power_file)
     
     source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
-    p = (source, k, rho, cp, (delta_x, delta_y, delta_z))
-    u0 = initialize_domain!(u0)
+    p = (source, k, rho, cp, (delta_x, delta_y, delta_z), settings)
+    u0 = initialize_domain!(u0, settings)
 
     # problem, algorithm = configure_problem_klu!(u0,p)
     # sol = solve(problem, algorithm, saveat=1.0,progress=true, maxiters=100, abstol=1e-3, reltol=1e-3)
 
-    problem,_ = configure_problem_ode!(u0,p)
+    problem,_ = configure_problem_ode!(u0,p,settings)
     sol = solve(problem, saveat=1.0,progress=true, progress_steps = 1,
                 maxiters=1000, abstol=1e-4, reltol=1e-4)
 

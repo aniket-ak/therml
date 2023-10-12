@@ -343,6 +343,7 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
     os.mkdir(output_dir)
     os.mkdir(log_dir)
     os.mkdir(sol_dir)
+    os.mkdir(temp_dir)
 
     if len(n_clicks) < 1:
         raise PreventUpdate
@@ -363,7 +364,9 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
     result = subprocess.run(["julia", "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/3d_fvm.jl", 
                              "-t", "4", "-working_dir", working_dir, "-power", power_file, "-run_name", 
                              simulation_name], capture_output=True, text=True)
-    
+    # julia --project=./therml_environment ./therml_environment/precompile_.jl -t 4 -working_dir 
+    #   /Users/aniket/Documents/MarlinSim/04_testing/scenarios -power file_1.csv -run_name "sim_1"
+
     # Check for errors
     if result.returncode != 0:
         print("Error:", result.stderr)

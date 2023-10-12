@@ -64,7 +64,7 @@ function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
     return source
 end
 
-function do_plotting(sol, sol_wd, interpolation)
+function do_plotting(sol, sol_wd, settings, interpolation)
     result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
@@ -96,7 +96,7 @@ function do_plotting(sol, sol_wd, interpolation)
             )
     end
 
-    open(joinpath(sol_wd,"./plot.html"), "w") do io
+    open(joinpath(sol_wd,"plot.html"), "w") do io
         PlotlyBase.to_html(io, p.plot)
     end
 end

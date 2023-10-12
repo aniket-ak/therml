@@ -55,7 +55,7 @@ function real_main()
     # sol = solve_(working_dir, scenario_name);
     sol = Base.invokelatest(solve_, working_dir, scenario_name, settings);
     # do_plotting(sol, sol_wd, false);
-    Base.invokelatest(do_plotting, sol, sol_wd,false)
+    Base.invokelatest(do_plotting, sol, sol_wd, settings, false)
     # save_fields(sol,sol_wd);
     Base.invokelatest(save_fields, sol, sol_wd)
     println(Dates.format(now(), "HH:MM:SS"))

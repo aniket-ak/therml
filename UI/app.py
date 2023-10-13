@@ -292,30 +292,32 @@ app.layout = dbc.Container([
               Input('pagination', 'active_page'))
 def update_output(list_of_names, list_of_names1, active_page):
     global df_tables
-    if list_of_names is not None:
+    # df_tables = pd.DataFrame()
+    # df_tables["Scenario"] = ["None"]
+    # df_tables["Status"] = ["None"]
+    # df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id="progress0")]
+    # df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate0",disabled=True)]
+    children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
+    
+    triggered_id = ctx.triggered_id
+
+    if triggered_id == "upload-data":
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Status"] = [dbc.Badge("Not started", color="secondary",text_color="white", id={"type":"status", "index":i}) for (i,name) in enumerate(list_of_names)]
-        # TODO - Save the dataframe state to a file and read it here for the progress to be overwritten every time pagination click happens
         df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
-    else:
-        df_tables = pd.DataFrame()
-        df_tables["Scenario"] = ["None"]
-        df_tables["Status"] = ["None"]
-        df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id="progress0")]
-        df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate0",disabled=True)]
-        children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
-    
-    if active_page is None and list_of_names is not None:
-        active_page=1
-        table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
-    elif active_page is None and list_of_names is None:
         table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
     else:
-        # TODO - Cleanup logic here
-        table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
+        if active_page is None and list_of_names is not None:
+            active_page=1
+            table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
+        elif active_page is None and list_of_names is None:
+            table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
+        else:
+            # TODO - Cleanup logic here
+            table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
 
     max_value = int(df_tables.shape[0]/10)+1
     
@@ -375,8 +377,7 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     button_id = ctx.triggered_id.index
     if active_page is None:
         active_page=1
-    
-    scenario_name = children[button_id][0]
+    scenario_name = children[button_id-active_page*10][0]
     print("Executing power file - ", scenario_name)
     
     # result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
@@ -406,6 +407,7 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     State({"type": "status", "index": ALL}, "color"),
     Input({"type": "simulate", "index": ALL}, "n_clicks"),)
 def timer(active_page, values, children, n, status,colors, n_clicks):
+    df_tables.to_csv('./df_tables.csv')
     children = [i[0] for i in children]
     current_progress = {s:v for (s,v) in zip(children, values)} 
     if os.path.exists(temp_dir) and len(os.listdir(temp_dir))>0:
@@ -431,7 +433,7 @@ def timer(active_page, values, children, n, status,colors, n_clicks):
         if v ==100:
             mod_status[i] = "Complete"
             mod_colors[i] = "success"
-
+    df_tables.to_csv('./df_tables1.csv')
     return list(current_progress.values()), mod_status, mod_colors
 
 @app.callback(

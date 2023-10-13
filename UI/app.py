@@ -381,18 +381,18 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     scenario_name = children[button_id-active_page*10][0]
     print("Executing power file - ", scenario_name)
     
-    # result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
-    #                          "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl", 
-    #                          "-t", "4", "-working_dir", working_dir, "-power", scenario_name, "-run_name", 
-    #                          run_name], capture_output=True, text=True)
+    result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
+                             "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl", 
+                             "-t", "4", "-working_dir", working_dir, "-power", scenario_name, "-run_name", 
+                             run_name], capture_output=True, text=True)
     
     # julia --project=./therml_environment /Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl -t 4 -working_dir 
     #   /Users/aniket/Documents/MarlinSim/04_testing/scenarios -power file_1.csv -run_name "sim_1"
 
     # Check for errors
-    # if result.returncode != 0:
-    #     print("Error:", result.stderr)
-    #     return None
+    if result.returncode != 0:
+        print("Error:", result.stderr)
+        return None
 
     return True
 
@@ -416,7 +416,8 @@ def timer(active_page, values, children, n, status,colors, n_clicks):
         for i in list_of_files:
             if i.split("__")[0] in children:
                 f=open(os.path.join(temp_dir,i), "r")
-                latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
+                if len(f.readlines())>0:
+                    latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
                 current_progress[i.split("__")[0]] = latest_progress
 
     n_clicks = ctx.triggered[0]["value"]

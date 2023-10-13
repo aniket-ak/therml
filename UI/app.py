@@ -236,6 +236,7 @@ upload_component = dcc.Upload(
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
+    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
     dbc.Tabs([
         dbc.Tab(
             dbc.Row([
@@ -249,7 +250,7 @@ app.layout = dbc.Container([
                             dbc.Col(["Upload Power dissipation files"]),
                             upload_component,
                             dbc.Label("Enter a name for simulation"),
-                            dbc.Input(placeholder=random_name, type="text", id="simulation_name")
+                            dbc.Input(placeholder=random_name, type="text", id="run_name")
                             ], width=3),
                     dbc.Col([
                             dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), 
@@ -259,6 +260,17 @@ app.layout = dbc.Container([
                             
                             dbc.Row([
                                 dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=6, id="scenario"),
+                                dbc.Toast(
+                                        "Simulation submitted",
+                                        id="success_toast",
+                                        header="Notification",
+                                        is_open=False,
+                                        dismissable=True,
+                                        icon="success",
+                                        duration=4000,
+                                        # top: 66 positions the toast below the navbar
+                                        style={"position": "fixed", "top": 66, "right": 10, "width": 350},
+                                    ),
                                 dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ],style={"margin-top": "30px"}),
                             html.Hr(),
@@ -283,9 +295,9 @@ def update_output(list_of_names, list_of_names1, active_page):
     if list_of_names is not None:
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
-        df_tables["Status"] = [dbc.Badge("Complete", color="white",text_color="success") for i in list_of_names]
+        df_tables["Status"] = [dbc.Badge("Not started", color="secondary",text_color="white", id={"type":"status", "index":i}) for (i,name) in enumerate(list_of_names)]
         # TODO - Save the dataframe state to a file and read it here for the progress to be overwritten every time pagination click happens
-        df_tables["Progress"] = [dbc.Progress(value=10, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
+        df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
     else:
@@ -325,25 +337,35 @@ def update_output(name):
     return fig
 
 @app.callback(
-    Output({"type": "progress", "index": ALL}, "value"), 
+    Output("success_toast", "is_open"),
     Input({"type": "simulate", "index": ALL}, "n_clicks"),
-    Input({"type": "progress", "index": ALL}, "value"),
-    Input({"type": "scenario", "index": ALL}, "children"),
+    State({"type": "scenario", "index": ALL}, "children"),
     State('pagination', 'active_page'),
     State('working_dir', 'value'),
-    State('simulation_name', 'value'))
-def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulation_name):
-    if simulation_name is None:
-        simulation_name = random_name
+    State('run_name', 'value'),
+    State({"type":"status", "index":ALL}, "children"),
+    State({"type": "status", "index": ALL}, "color"),)
+def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, status,colors):
+    if run_name is None:
+        run_name = random_name
     
-    output_dir = os.path.join(working_dir,simulation_name)
-    log_dir = os.path.join(output_dir, "Logs")
-    sol_dir = os.path.join(output_dir, "Solution")
-    temp_dir = os.path.join(output_dir, "Temp")
-    os.mkdir(output_dir)
-    os.mkdir(log_dir)
-    os.mkdir(sol_dir)
-    os.mkdir(temp_dir)
+    global temp_dir
+    if working_dir is not None:
+        output_dir = os.path.join(working_dir,run_name)
+        log_dir = os.path.join(output_dir, "Logs")
+        sol_dir = os.path.join(output_dir, "Solution")
+        temp_dir = os.path.join(output_dir, "Temp")
+    else:
+        return False
+
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+    if not os.path.exists(sol_dir):
+        os.mkdir(sol_dir)
+    if not os.path.exists(temp_dir):
+        os.mkdir(temp_dir)
 
     if len(n_clicks) < 1:
         raise PreventUpdate
@@ -354,26 +376,63 @@ def filter_heatmap(n_clicks, values, children, active_page, working_dir, simulat
     if active_page is None:
         active_page=1
     
-    mod_values = values
-    if isinstance(button_id, int):
-        mod_values[button_id-(active_page-1)*10] = 100
+    scenario_name = children[button_id][0]
+    print("Executing power file - ", scenario_name)
     
-    power_file = os.path.join(working_dir, children[button_id][0])
-    print("Executing power file - ", power_file)
+    # result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
+    #                          "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl", 
+    #                          "-t", "4", "-working_dir", working_dir, "-power", scenario_name, "-run_name", 
+    #                          run_name], capture_output=True, text=True)
     
-    result = subprocess.run(["julia", "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/3d_fvm.jl", 
-                             "-t", "4", "-working_dir", working_dir, "-power", power_file, "-run_name", 
-                             simulation_name], capture_output=True, text=True)
-    # julia --project=./therml_environment ./therml_environment/precompile_.jl -t 4 -working_dir 
+    # julia --project=./therml_environment /Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl -t 4 -working_dir 
     #   /Users/aniket/Documents/MarlinSim/04_testing/scenarios -power file_1.csv -run_name "sim_1"
 
     # Check for errors
-    if result.returncode != 0:
-        print("Error:", result.stderr)
-        return None
+    # if result.returncode != 0:
+    #     print("Error:", result.stderr)
+    #     return None
 
-    return mod_values
+    return True
 
+@app.callback(
+    Output({"type": "progress", "index": ALL}, "value"),
+    Output({"type": "status", "index": ALL}, "children"), 
+    Output({"type": "status", "index": ALL}, "color"),
+    State('pagination', 'active_page'),
+    State({"type": "progress", "index": ALL}, "value"),
+    State({"type": "scenario", "index": ALL}, "children"),
+    [Input('interval-component', 'n_intervals')],
+    State({"type":"status", "index":ALL}, "children"),
+    State({"type": "status", "index": ALL}, "color"),
+    Input({"type": "simulate", "index": ALL}, "n_clicks"),)
+def timer(active_page, values, children, n, status,colors, n_clicks):
+    children = [i[0] for i in children]
+    current_progress = {s:v for (s,v) in zip(children, values)} 
+    if os.path.exists(temp_dir) and len(os.listdir(temp_dir))>0:
+        list_of_files = os.listdir(temp_dir)
+        for i in list_of_files:
+            f=open(os.path.join(temp_dir,i), "r")
+            latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
+            current_progress[i.split("__")[0]] = latest_progress
+
+    n_clicks = ctx.triggered[0]["value"]
+    if not n_clicks:
+        raise PreventUpdate
+    button_id = ctx.triggered_id.index
+    if active_page is None:
+        active_page=1
+    mod_status = status
+    mod_colors = colors
+    if isinstance(button_id, int):
+        mod_status[button_id-(active_page-1)*10] = "In Progress"
+        mod_colors[button_id-(active_page-1)*10] = "primary"
+    
+    for i, (s, v) in enumerate(current_progress.items()):
+        if v ==100:
+            mod_status[i] = "Complete"
+            mod_colors[i] = "success"
+
+    return list(current_progress.values()), mod_status, mod_colors
 
 @app.callback(
     Output("working_dir", "invalid"),

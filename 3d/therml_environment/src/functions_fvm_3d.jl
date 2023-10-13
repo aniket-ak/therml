@@ -64,7 +64,7 @@ function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
     return source
 end
 
-function do_plotting(sol, sol_wd, settings, interpolation)
+function do_plotting(sol, sol_wd, settings, scenario_name, interpolation)
     result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
@@ -96,7 +96,7 @@ function do_plotting(sol, sol_wd, settings, interpolation)
             )
     end
 
-    open(joinpath(sol_wd,"plot.html"), "w") do io
+    open(joinpath(sol_wd,scenario_name*"__plot.html"), "w") do io
         PlotlyBase.to_html(io, p.plot)
     end
 end
@@ -283,8 +283,8 @@ function interpolate_(x,y,z,new_x,new_y)
     return new_z
 end
 
-function save_fields(sol,sol_wd)
-    h5open(joinpath(sol_wd,"solution.sol"), "w") do file
+function save_fields(sol,sol_wd, scenario_name)
+    h5open(joinpath(sol_wd,scenario_name"__solution.sol"), "w") do file
         g = HDF5.create_group(file, "solution")
 
         for (i,t) in enumerate(sol.t)

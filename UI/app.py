@@ -377,6 +377,7 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     button_id = ctx.triggered_id.index
     if active_page is None:
         active_page=1
+    #print("active_page:", active_page, "button_id", button_id, "children len", len(children))
     scenario_name = children[button_id-active_page*10][0]
     print("Executing power file - ", scenario_name)
     
@@ -407,15 +408,16 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     State({"type": "status", "index": ALL}, "color"),
     Input({"type": "simulate", "index": ALL}, "n_clicks"),)
 def timer(active_page, values, children, n, status,colors, n_clicks):
-    df_tables.to_csv('./df_tables.csv')
+    # df_tables.to_csv('./df_tables.csv')
     children = [i[0] for i in children]
     current_progress = {s:v for (s,v) in zip(children, values)} 
     if os.path.exists(temp_dir) and len(os.listdir(temp_dir))>0:
         list_of_files = os.listdir(temp_dir)
         for i in list_of_files:
-            f=open(os.path.join(temp_dir,i), "r")
-            latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
-            current_progress[i.split("__")[0]] = latest_progress
+            if i.split("__")[0] in children:
+                f=open(os.path.join(temp_dir,i), "r")
+                latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
+                current_progress[i.split("__")[0]] = latest_progress
 
     n_clicks = ctx.triggered[0]["value"]
     if not n_clicks:
@@ -425,15 +427,23 @@ def timer(active_page, values, children, n, status,colors, n_clicks):
         active_page=1
     mod_status = status
     mod_colors = colors
-    if isinstance(button_id, int):
-        mod_status[button_id-(active_page-1)*10] = "In Progress"
-        mod_colors[button_id-(active_page-1)*10] = "primary"
-    
+
     for i, (s, v) in enumerate(current_progress.items()):
-        if v ==100:
-            mod_status[i] = "Complete"
-            mod_colors[i] = "success"
-    df_tables.to_csv('./df_tables1.csv')
+        if isinstance(button_id, int):
+            if v > 99.9:
+                mod_status[i-(active_page-1)*10] = "Complete"
+                mod_colors[i-(active_page-1)*10] = "success"
+                df_tables.loc[button_id, "Status"] = dbc.Badge("Complete", color="success",text_color="white", id={"type":"status", "index":button_id})
+            else:
+                mod_status[button_id-(active_page-1)*10] = "In Progress"
+                mod_colors[button_id-(active_page-1)*10] = "primary"
+                df_tables.loc[button_id, "Status"] = dbc.Badge("In Progress", color="primary",text_color="white", id={"type":"status", "index":button_id})
+
+    # df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
+    
+    # df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
+    # df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
+    # df_tables.to_csv('./df_tables1.csv')
     return list(current_progress.values()), mod_status, mod_colors
 
 @app.callback(

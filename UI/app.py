@@ -409,6 +409,7 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     Input({"type": "simulate", "index": ALL}, "n_clicks"),)
 def timer(active_page, values, children, n, status,colors, n_clicks):
     # df_tables.to_csv('./df_tables.csv')
+    global temp_dir
     children = [i[0] for i in children]
     current_progress = {s:v for (s,v) in zip(children, values)} 
     if os.path.exists(temp_dir) and len(os.listdir(temp_dir))>0:
@@ -418,7 +419,7 @@ def timer(active_page, values, children, n, status,colors, n_clicks):
                 f=open(os.path.join(temp_dir,i), "r")
                 if len(f.readlines())>0:
                     latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
-                current_progress[i.split("__")[0]] = latest_progress
+                    current_progress[i.split("__")[0]] = latest_progress
 
     n_clicks = ctx.triggered[0]["value"]
     if not n_clicks:

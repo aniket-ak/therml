@@ -10,6 +10,7 @@ import os
 import subprocess
 from dash.exceptions import PreventUpdate
 import random
+from functions import *
 
 
 first_names = ["Blue", "Red", "Green", "Yellow", "Orange", "Purple", "Silver", "Golden", "Ruby", "Sapphire", "Emerald", "Diamond",
@@ -384,17 +385,24 @@ def filter_heatmap(n_clicks, active_page, working_dir, run_name, status,colors):
         scenario_name = df_tables["Scenario"][button_id] #children[button_id][0]
     print("Executing power file - ", scenario_name)
     
-    result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
-                             "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl", 
-                             "-t", "4", "-working_dir", working_dir, "-power", scenario_name, "-run_name", 
-                             run_name], capture_output=True, text=True)
+    # result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
+    #                          "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl", 
+    #                          "-t", "4", "-working_dir", working_dir, "-power", scenario_name, "-run_name", 
+    #                          run_name], capture_output=True, text=True)
+
+    # run_julia(working_dir=working_dir, scenario_name=scenario_name, run_name=run_name)
+    output_queue = queue.Queue()
+    julia_thread = threading.Thread(target=run_julia, args=(working_dir, scenario_name, run_name, output_queue))
+    julia_thread.start()
+    print("Captured output:")
+    captured_output = output_queue.get()
+    print(captured_output)
+
+    julia_thread.join()
+
     
     # julia --project=./therml_environment /Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl -t 4 -working_dir 
     #   /Users/aniket/Documents/MarlinSim/04_testing/scenarios -power file_1.csv -run_name "sim_1"
-
-    if result.returncode != 0:
-        print("Error:", result.stderr)
-        return None
 
     return True
 
@@ -440,11 +448,11 @@ def timer(active_page, values, n, status,colors, n_clicks):
         if v > 99.9:
             mod_status[row_num-(active_page-1)*10] = "Complete"
             mod_colors[row_num-(active_page-1)*10] = "success"
-            df_tables.iloc[row_num]["Status"] = dbc.Badge("Complete", color="success",text_color="white", id={"type":"status", "index":row_num})
+            df_tables.loc[row_num,"Status"] = dbc.Badge("Complete", color="success",text_color="white", id={"type":"status", "index":row_num})
         elif v>0.0:
             mod_status[row_num-(active_page-1)*10] = "In Progress"
             mod_colors[row_num-(active_page-1)*10] = "primary"
-            df_tables.iloc[row_num]["Status"] = dbc.Badge("In Progress", color="primary",text_color="white", id={"type":"status", "index":row_num})
+            df_tables.loc[row_num,"Status"] = dbc.Badge("In Progress", color="primary",text_color="white", id={"type":"status", "index":row_num})
 
     # df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
     

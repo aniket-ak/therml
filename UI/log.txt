@@ -1,8 +1,0 @@
-["-t", "4", "-working_dir", "/Users/aniket/Documents/MarlinSim/04_testing/scenarios", "-power", "file_1.csv", "-run_name", "Ebony_Dingo"]
-working_dir:  /Users/aniket/Documents/MarlinSim/04_testing/scenarios
-scenario_name:  file_1.csv
-run_name:  Ebony_Dingo
-temp file:  /Users/aniket/Documents/MarlinSim/04_testing/scenarios/Ebony_Dingo/Temp
-/Users/aniket/Documents/MarlinSim/04_testing/scenarios/Ebony_Dingo/Temp/file_1.csv__progress.txt
-16:54:29
-16:55:45

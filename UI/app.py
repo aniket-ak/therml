@@ -377,8 +377,11 @@ def filter_heatmap(n_clicks, children, active_page, working_dir, run_name, statu
     button_id = ctx.triggered_id.index
     if active_page is None:
         active_page=1
-    #print("active_page:", active_page, "button_id", button_id, "children len", len(children))
-    scenario_name = children[button_id-active_page*10][0]
+    # print("active_page:", active_page, "button_id", button_id, "children len", len(children))
+    if button_id>10:
+        scenario_name = children[button_id-active_page*10][0]
+    else:
+        scenario_name = children[button_id][0]
     print("Executing power file - ", scenario_name)
     
     result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
@@ -416,10 +419,12 @@ def timer(active_page, values, children, n, status,colors, n_clicks):
         list_of_files = os.listdir(temp_dir)
         for i in list_of_files:
             if i.split("__")[0] in children:
+                print(i)
                 f=open(os.path.join(temp_dir,i), "r")
                 if len(f.readlines())>0:
                     latest_progress = int(f.readlines()[-1].split("|")[0].split(" ")[-1].split("%")[0])
                     current_progress[i.split("__")[0]] = latest_progress
+                f.close()
 
     n_clicks = ctx.triggered[0]["value"]
     if not n_clicks:

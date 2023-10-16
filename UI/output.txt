@@ -4,5 +4,7 @@ scenario_name:  file_1.csv
 run_name:  sim_1
 temp file:  /Users/aniket/Documents/MarlinSim/04_testing/scenarios/sim_1/Temp
 /Users/aniket/Documents/MarlinSim/04_testing/scenarios/sim_1/Temp/file_1.csv__progress.txt
-09:04:13
-09:05:08
+09:06:33
+total mesh count: 7.2 k
+Mesh elements across X, Y and Z 30 , 30 , 8
+09:07:16

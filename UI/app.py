@@ -237,7 +237,7 @@ upload_component = dcc.Upload(
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
-    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
+    dcc.Interval(id='interval-component', interval=2*1000, n_intervals=0),
     dbc.Tabs([
         dbc.Tab(
             dbc.Row([
@@ -301,24 +301,26 @@ def update_output(list_of_names, list_of_names1, active_page):
     children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
     
     triggered_id = ctx.triggered_id
+    cols_to_display = ["Scenario","Status","Progress","Simulate"]
 
     if triggered_id == "upload-data":
         df_tables = pd.DataFrame()
         df_tables["Scenario"] = list_of_names #[dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
+        df_tables["status_internal"] = ["yet_to_start" for i in range(len(list_of_names))]
         df_tables["Status"] = [dbc.Badge("Not started", color="secondary",text_color="white", id={"type":"status", "index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
         children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
-        table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
+        table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][0:10], striped=True, bordered=True, hover=True)
     else:
         if active_page is None and list_of_names is not None:
             active_page=1
-            table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
+            table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
         elif active_page is None and list_of_names is None:
-            table_ = dbc.Table.from_dataframe(df_tables[0:10], striped=True, bordered=True, hover=True)
+            table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][0:10], striped=True, bordered=True, hover=True)
         else:
             # TODO - Cleanup logic here
-            table_ = dbc.Table.from_dataframe(df_tables[(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
+            table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
 
     max_value = int(df_tables.shape[0]/10)+1
     
@@ -383,6 +385,7 @@ def filter_heatmap(n_clicks, active_page, working_dir, run_name, status,colors):
         scenario_name = df_tables["Scenario"][button_id] #children[button_id-active_page*10][0]
     else:
         scenario_name = df_tables["Scenario"][button_id] #children[button_id][0]
+    df_tables.loc[button_id,'status_internal'] = 'wip'
     print("Executing power file - ", scenario_name)
     
     # result = subprocess.run(["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
@@ -418,7 +421,9 @@ def filter_heatmap(n_clicks, active_page, working_dir, run_name, status,colors):
     State({"type": "status", "index": ALL}, "color"),
     Input({"type": "simulate", "index": ALL}, "n_clicks"),)
 def timer(active_page, values, n, status,colors, n_clicks):
-    children = df_tables["Scenario"].tolist() #[i[0] for i in children]
+    if active_page is None:
+        active_page=1
+    children = df_tables.loc[(active_page-1)*10:(active_page)*10,"Scenario"].tolist() #[i[0] for i in children]
     current_progress = {s:v for (s,v) in zip(children, values)} 
     
     if 'temp_dir' in globals():
@@ -438,20 +443,18 @@ def timer(active_page, values, n, status,colors, n_clicks):
     if not n_clicks:
         raise PreventUpdate
     button_id = ctx.triggered_id.index
-    if active_page is None:
-        active_page=1
     mod_status = status
     mod_colors = colors
 
     for i, (s, v) in enumerate(current_progress.items()):
         row_num = int(df_tables[df_tables["Scenario"] == s].index[0])
         if v > 99.9:
-            mod_status[row_num-(active_page-1)*10] = "Complete"
-            mod_colors[row_num-(active_page-1)*10] = "success"
+            mod_status[row_num] = "Complete"
+            mod_colors[row_num] = "success"
             df_tables.loc[row_num,"Status"] = dbc.Badge("Complete", color="success",text_color="white", id={"type":"status", "index":row_num})
-        elif v>0.0:
-            mod_status[row_num-(active_page-1)*10] = "In Progress"
-            mod_colors[row_num-(active_page-1)*10] = "primary"
+        elif df_tables.loc[row_num,"status_internal"] == 'wip':
+            mod_status[row_num] = "In Progress"
+            mod_colors[row_num] = "primary"
             df_tables.loc[row_num,"Status"] = dbc.Badge("In Progress", color="primary",text_color="white", id={"type":"status", "index":row_num})
 
     # df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]

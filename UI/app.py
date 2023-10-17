@@ -310,7 +310,6 @@ def update_output(list_of_names, list_of_names1, active_page):
         df_tables["Status"] = [dbc.Badge("Not started", color="secondary",text_color="white", id={"type":"status", "index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
         df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
-        children = [dbc.Select(options=[{"label":i,"value":i} for i in list_of_names],id="viz_dropdown")]
         table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][0:10], striped=True, bordered=True, hover=True)
     else:
         if active_page is None and list_of_names is not None:
@@ -321,7 +320,7 @@ def update_output(list_of_names, list_of_names1, active_page):
         else:
             # TODO - Cleanup logic here
             table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
-
+    children = [dbc.Select(options=[{"label":i,"value":i} for i in df_tables["Scenario"].to_list()],id="viz_dropdown")]
     max_value = int(df_tables.shape[0]/10)+1
     
     return table_, children, max_value

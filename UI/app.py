@@ -237,7 +237,7 @@ upload_component = dcc.Upload(
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
-    dcc.Interval(id='interval-component', interval=2*1000, n_intervals=0),
+    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
     dbc.Tabs([
         dbc.Tab(
             dbc.Row([
@@ -262,15 +262,9 @@ app.layout = dbc.Container([
                             dbc.Row([
                                 dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=6, id="scenario"),
                                 dbc.Toast(
-                                        "Simulation submitted",
-                                        id="success_toast",
-                                        header="Notification",
-                                        is_open=False,
-                                        dismissable=True,
-                                        icon="success",
-                                        duration=4000,
-                                        # top: 66 positions the toast below the navbar
-                                        style={"position": "fixed", "top": 66, "right": 10, "width": 350},
+                                        "Simulation submitted",id="success_toast",header="Notification",
+                                        is_open=False,dismissable=True, icon="success", duration=4000, style={"position": "fixed", 
+                                        "top": 66, "right": 10, "width": 350},
                                     ),
                                 dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ],style={"margin-top": "30px"}),
@@ -293,11 +287,6 @@ app.layout = dbc.Container([
               Input('pagination', 'active_page'))
 def update_output(list_of_names, list_of_names1, active_page):
     global df_tables
-    # df_tables = pd.DataFrame()
-    # df_tables["Scenario"] = ["None"]
-    # df_tables["Status"] = ["None"]
-    # df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id="progress0")]
-    # df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id="simulate0",disabled=True)]
     children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
     
     triggered_id = ctx.triggered_id
@@ -448,12 +437,12 @@ def timer(active_page, values, n, status,colors, n_clicks):
     for i, (s, v) in enumerate(current_progress.items()):
         row_num = int(df_tables[df_tables["Scenario"] == s].index[0])
         if v > 99.9:
-            mod_status[row_num] = "Complete"
-            mod_colors[row_num] = "success"
+            mod_status[row_num-(active_page-1)*10] = "Complete"
+            mod_colors[row_num-(active_page-1)*10] = "success"
             df_tables.loc[row_num,"Status"] = dbc.Badge("Complete", color="success",text_color="white", id={"type":"status", "index":row_num})
         elif df_tables.loc[row_num,"status_internal"] == 'wip':
-            mod_status[row_num] = "In Progress"
-            mod_colors[row_num] = "primary"
+            mod_status[row_num-(active_page-1)*10] = "In Progress"
+            mod_colors[row_num-(active_page-1)*10] = "primary"
             df_tables.loc[row_num,"Status"] = dbc.Badge("In Progress", color="primary",text_color="white", id={"type":"status", "index":row_num})
 
     # df_tables["Scenario"] = [dbc.Col([name], id={"type":"scenario", "index":i}) for (i,name) in enumerate(list_of_names)]
@@ -482,17 +471,6 @@ def toggle_modal(n1, n2, is_open):
     if n1 or n2:
         return not is_open
     return is_open
-
-
-# @app.callback(
-#     Output("scenario", "children"),
-#     [Input("pagination", "active_page")],
-# )
-# def change_page(page):
-#     if page:
-#         return f"Page selected: {page}"
-#     return "Select a page"
-
 
 if __name__ == "__main__":
     app.run_server(debug=True, port=8051)

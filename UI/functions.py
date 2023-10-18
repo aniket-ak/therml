@@ -1,4 +1,25 @@
 import subprocess, threading, queue
+import matplotlib.pyplot as plt
+import numpy as np
+import plotly.express as px
+import pandas as pd
+
+import h5py
+
+def read_solution(file):
+    f = h5py.File(file, "r")
+    time_duration = len(f['solution'].keys())
+    sol_shape = np.array(list(f['solution']['1'])).T.shape
+
+    solution = np.empty((tuple([time_duration] + list(sol_shape))))
+    solution.shape
+    for i in range(1,time_duration):
+        solution[i,:] = np.array(list(f['solution'][str(i)])).T
+    time_ = list(f['solution'].keys())
+    time_ = [int(i) for i in time_]
+    time_.sort()
+    time_ = np.array(time_)
+    return solution, time_
 
 class StdoutCapture:
     def __init__(self):

@@ -11,7 +11,10 @@ import subprocess
 from dash.exceptions import PreventUpdate
 import random
 from functions import *
+import time
 
+working_dir_proj = ""
+run_name_proj = ""
 
 first_names = ["Blue", "Red", "Green", "Yellow", "Orange", "Purple", "Silver", "Golden", "Ruby", "Sapphire", "Emerald", "Diamond",
                 "Amber", "Topaz", "Jade", "Pearl", "Opal", "Crimson", "Lavender", "Azure", "Cobalt", "Indigo", "Violet", "Magenta",
@@ -52,7 +55,7 @@ app = dash.Dash(
 # app.stylesheets.serve_locally=True
 app.scripts.serve_locally = True
 app._favicon = "favicon.ico"
-app.title = "therML"
+app.title = "Marlinsim therML"
 
 header = html.H1(
     "MarlinSim TherML"
@@ -236,16 +239,26 @@ upload_component = dcc.Upload(
 
 viz_modal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle(
-        "Visualization")),
-    dbc.Col([dbc.Select(options=[{"label":i,"value":i} for i in ["None"]], id="viz_dropdown")], width=12, id="dropdowns"),
+        "Power and Temperature Visualization"), style={"margin-top": "10px"}),
+    dbc.Col([
+        dbc.Row([dbc.Col("Select the scenario from dropdown"),dbc.Col([dbc.Select(options=[{"label":i,"value":i} for i in ["None"]], id="viz_dropdown")])])
+        ], width=6, id="dropdowns", align="center", style={"margin-top": "10px"}),
     dbc.Col([dcc.Graph(id="contour")], width=12, id="visualization"),
+    dbc.Row([
+        dbc.Col(["Select time step"],width=2), 
+        dbc.Col(dbc.Input(placeholder=0, type="number", size="sm", id="viz_time_value"), width=1), 
+        dbc.Col("[s]", width=1),
+        dbc.Col("Cut-plane", width=1),
+        dbc.Col(dbc.Select(["XY", "YZ", "ZX"],"XY", id="viz_cutplane"), width=1),
+        dbc.Col(["Select cut-section"], width =2), 
+        dbc.Col([dcc.Slider(0, 1, id='cut_section_slider',tooltip={"placement": "bottom", "always_visible": True})], width=4)]),
     dbc.Col([dcc.Graph(id="temp_contour")], width=12, id="visualization_temperature"),
     dbc.ModalFooter(
         dbc.Button(
             "Close", id="viz_close", className="ms-auto", n_clicks=0
         )
     ),
-], id="viz_modal", is_open=False,fullscreen=True)
+], id="viz_modal", is_open=False,size="xl")
 
 app.layout = dbc.Container([
     navbar,
@@ -257,7 +270,7 @@ app.layout = dbc.Container([
                     dbc.Col([
                             dbc.Row([dbc.Col([dbc.Label("Model Settings")]), 
                                      dbc.Col([dbc.Button("Settings", id="open", n_clicks=0),])
-                                     ],style={"margin-top": "30px"}),
+                                     ],style={"margin-top": "30px"}, justify="between"),
                             settings_modal,
                             dbc.Label("Select the working directory"),
                             dbc.Input(placeholder="Working Directory", type="text", id="working_dir", required=True),
@@ -267,7 +280,8 @@ app.layout = dbc.Container([
                             dbc.Input(placeholder=random_name, type="text", id="run_name")
                             ], width=3),
                     dbc.Col([
-                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([dbc.Button("Visualization", id="viz_open", n_clicks=0),]), viz_modal],style={"margin-top": "30px"}),
+                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([dbc.Button("Visualization", id="viz_open", n_clicks=0),], width="auto"), viz_modal
+                                     ],style={"margin-top": "30px"}, justify="between"),
                             dbc.Row([
                                 dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=12, id="scenario"),
                                 dbc.Toast(
@@ -284,7 +298,7 @@ app.layout = dbc.Container([
                     ]), label="Thermal Simulation"),
         dbc.Tab("ML flow", label="Machine Learning")
     ]),
-])
+], fluid=True)
 
 @app.callback(Output('scenario', 'children'),
               Output('dropdowns', 'children'),
@@ -294,7 +308,7 @@ app.layout = dbc.Container([
               Input('pagination', 'active_page'))
 def update_output(list_of_names, list_of_names1, active_page):
     global df_tables
-    children = [dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
+    children = [dbc.Col(["Select scenario from dropdown"]),dbc.Select(options=[{"label":i,"value":i} for i in ["None"]],id="viz_dropdown")]
     
     triggered_id = ctx.triggered_id
     cols_to_display = ["Scenario","Status","Progress","Simulate"]
@@ -316,25 +330,57 @@ def update_output(list_of_names, list_of_names1, active_page):
         else:
             # TODO - Cleanup logic here
             table_ = dbc.Table.from_dataframe(df_tables[cols_to_display][(active_page-1)*10:(active_page)*10], striped=True, bordered=True, hover=True)
-    children = [dbc.Select(options=[{"label":i,"value":i} for i in df_tables["Scenario"].to_list()],id="viz_dropdown")]
+    children = ["Select scenario from dropdown",dbc.Select(options=[{"label":i,"value":i} for i in df_tables["Scenario"].to_list()],id="viz_dropdown")]
     max_value = int(df_tables.shape[0]/10)+1
     
     return table_, children, max_value
 
 @app.callback(Output('contour', 'figure'),
-              Input('viz_dropdown', 'value'))
-def update_output(name):
-    import time
+              Output('temp_contour', 'figure'),
+              Input('viz_dropdown', 'value'),
+              Input('cut_section_slider', 'value'),
+              Input('viz_time_value', 'value'),
+              Input('viz_cutplane', 'value'))
+def update_output(name, slider_value, viz_time_value, viz_cut_plane):
     time.sleep(1)
+    global working_dir_proj
 
-    if name is not None:
-        path = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios"
-        csv_ = os.path.join(path, name)
+    if name is not None and name != "None":
+        csv_ = os.path.join(working_dir_proj, name)
         matrix = pd.read_csv(csv_, header=None).values
         fig = px.imshow(matrix,labels=dict(x="X", y="Y",color="Power"),color_continuous_scale='jet')
     else:
         fig = px.area()
-    return fig
+    
+    if name is not None and name != "None":
+        sol_name = name+"__solution.sol"
+        solution_dir = os.path.join(os.path.join(working_dir_proj, run_name_proj), "Solution")
+        file = os.path.join(solution_dir, sol_name)
+        if slider_value is None:
+            slider_value = 0
+        if viz_time_value is None:
+            viz_time_value = 1
+        if os.path.exists(file):
+            solution_, time_ = read_solution(file)
+            contour_time = time_[np.where(time_==viz_time_value)]
+            if contour_time is not []:
+                if viz_cut_plane == "XY":
+                    contour = solution_[contour_time, 1:-1, 1:-1, int(slider_value*solution_.shape[3])]
+                    fig_temp = px.imshow(contour[0],labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
+                elif viz_cut_plane == "YZ":
+                    contour = solution_[contour_time, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
+                    fig_temp = px.imshow(contour[0],labels=dict(x="Y", y="Z",color="Temperature"),color_continuous_scale='jet')
+                else:
+                    contour = solution_[contour_time, 1:-1, int(slider_value*solution_.shape[2]), 1:-1]
+                    fig_temp = px.imshow(contour[0],labels=dict(x="X", y="Z",color="Temperature"),color_continuous_scale='jet')
+                
+            else:
+                fig_temp = px.area()
+        else:
+            fig_temp = px.area()
+    else:
+        fig_temp = px.area()
+    return fig, fig_temp
 
 @app.callback(
     Output("success_toast", "is_open"),
@@ -350,6 +396,11 @@ def filter_heatmap(n_clicks, active_page, working_dir, run_name, status,colors):
         run_name = random_name
     
     global temp_dir
+    global working_dir_proj
+    global run_name_proj
+    working_dir_proj = working_dir
+    run_name_proj = run_name
+
     if working_dir is not None:
         output_dir = os.path.join(working_dir,run_name)
         log_dir = os.path.join(output_dir, "Logs")

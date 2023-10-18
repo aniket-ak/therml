@@ -234,6 +234,19 @@ upload_component = dcc.Upload(
     multiple=True
 )
 
+viz_modal = dbc.Modal([
+    dbc.ModalHeader(dbc.ModalTitle(
+        "Visualization")),
+    dbc.Col([dbc.Select(options=[{"label":i,"value":i} for i in ["None"]], id="viz_dropdown")], width=12, id="dropdowns"),
+    dbc.Col([dcc.Graph(id="contour")], width=12, id="visualization"),
+    dbc.Col([dcc.Graph(id="temp_contour")], width=12, id="visualization_temperature"),
+    dbc.ModalFooter(
+        dbc.Button(
+            "Close", id="viz_close", className="ms-auto", n_clicks=0
+        )
+    ),
+], id="viz_modal", is_open=False,fullscreen=True)
+
 app.layout = dbc.Container([
     navbar,
     html.Hr(),
@@ -254,19 +267,14 @@ app.layout = dbc.Container([
                             dbc.Input(placeholder=random_name, type="text", id="run_name")
                             ], width=3),
                     dbc.Col([
-                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), 
-                                     dbc.Col([
-                                    dbc.Select(options=[{"label":i,"value":i} for i in ["None"]], id="viz_dropdown")
-                                    ], width=6, id="dropdowns"),],style={"margin-top": "30px"}),
-                            
+                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([dbc.Button("Visualization", id="viz_open", n_clicks=0),]), viz_modal],style={"margin-top": "30px"}),
                             dbc.Row([
-                                dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=6, id="scenario"),
+                                dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=12, id="scenario"),
                                 dbc.Toast(
                                         "Simulation submitted",id="success_toast",header="Notification",
                                         is_open=False,dismissable=True, icon="success", duration=4000, style={"position": "fixed", 
                                         "top": 66, "right": 10, "width": 350},
                                     ),
-                                dbc.Col([dcc.Graph(id="contour")], width=6, id="visualization"),
                             ],style={"margin-top": "30px"}),
                             html.Hr(),
                             dbc.Col([dbc.Pagination(id="pagination", max_value=5),]),
@@ -277,7 +285,6 @@ app.layout = dbc.Container([
         dbc.Tab("ML flow", label="Machine Learning")
     ]),
 ])
-
 
 @app.callback(Output('scenario', 'children'),
               Output('dropdowns', 'children'),
@@ -399,6 +406,7 @@ def filter_heatmap(n_clicks, active_page, working_dir, run_name, status,colors):
 
 @app.callback(
     Output({"type": "progress", "index": ALL}, "value"),
+    Output({"type": "progress", "index": ALL}, "label"),
     Output({"type": "status", "index": ALL}, "children"), 
     Output({"type": "status", "index": ALL}, "color"),
     State('pagination', 'active_page'),
@@ -450,7 +458,7 @@ def timer(active_page, values, n, status,colors, n_clicks):
     # df_tables["Progress"] = [dbc.Progress(value=0, striped=True, id={"type":"progress","index":i}) for (i,name) in enumerate(list_of_names)]
     # df_tables["Simulate"] = [dbc.Button("Simulate", color="primary", className="me-1", id={"type":"simulate","index":i}) for (i,name) in enumerate(list_of_names)]
     # df_tables.to_csv('./df_tables1.csv')
-    return list(current_progress.values()), mod_status, mod_colors
+    return list(current_progress.values()), list(current_progress.values()), mod_status, mod_colors
 
 @app.callback(
     Output("working_dir", "invalid"),
@@ -466,6 +474,17 @@ def check_working_dir(dir):
     Output("modal", "is_open"),
     [Input("open", "n_clicks"), Input("close", "n_clicks")],
     [State("modal", "is_open")],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
+
+@app.callback(
+    Output("viz_modal", "is_open"),
+    [Input("viz_open", "n_clicks"), 
+     Input("viz_close", "n_clicks")],
+    [State("viz_modal", "is_open")],
 )
 def toggle_modal(n1, n2, is_open):
     if n1 or n2:

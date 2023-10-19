@@ -66,7 +66,7 @@ material_file = os.path.join("../", "3d/common/materials.json")
 with open(material_file, 'r') as file:
     data = json.load(file)
 
-material_names = [i['name'] for i in data['materials']]
+material_names = [list(i.keys())[0] for i in data['materials']]
 material_names.sort()
 
 toast = dbc.Toast(
@@ -107,7 +107,7 @@ left_accordion = dbc.Accordion([
             dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="underfill_x",value=12)], width=2),
             dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="underfill_y",value=12)], width=2),
             dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="underfill_z",value=4)], width=2),
-            dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="epoxy_material")], width=3),
+            dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="underfill_material")], width=3),
             dbc.Col([dbc.Select(material_names, "FR4", id="epoxy_surface_material")], width=3)
         ]),
 
@@ -545,7 +545,7 @@ def check_working_dir(dir):
     State("mold_x","value"), State("mold_y","value"), State("mold_z","value"), State("die_x","value"), State("die_y","value"), State("die_z","value"),
     State("underfill_x","value"), State("underfill_y","value"), State("underfill_z","value"), State("bumps_x","value"), State("bumps_y","value"), State("bumps_z","value"), 
     State("substrate_x","value"), State("substrate_y","value"), State("substrate_z","value"), State("solder_x","value"), State("solder_y","value"), State("solder_z","value"),
-    State("mold_material", "value"), State("die_material", "value"), State("epoxy_material", "value"), State("bumps_materials", "value"), State("substrate_materials", "value"),
+    State("mold_material", "value"), State("die_material", "value"), State("underfill_material", "value"), State("bumps_materials", "value"), State("substrate_materials", "value"),
     State("solder_materials", "value"), State("mold_surface_material", "value"), State("die_surface_material", "value"), State("epoxy_surface_material", "value"),
     State("bumps_surface_materials", "value"), State("substrate_surface_materials", "value"), State("solder_surface_materials", "value"), State("ambient_temp", "value"),
     State("start_time", "value"), State("end_time", "value"), State("top_bc_type", "value"), State("top_bc_value", "value"), State("top_bc_ref_temp", "value"),
@@ -553,7 +553,7 @@ def check_working_dir(dir):
 ])
 def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
                  bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
-                 mold_material, die_material, epoxy_material, bumps_materials, substrate_materials, solder_materials,
+                 mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
                  mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials,
                  ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp):
     global working_dir_proj
@@ -561,9 +561,10 @@ def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, di
     if n1:
         if working_dir_proj != "" and working_dir_proj is not None:
             settings_file = os.path.join(working_dir_proj, "settings.json")
+            print(mold_x)
             save_to_json(settings_file, (mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
                     bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
-                    mold_material, die_material, epoxy_material, bumps_materials, substrate_materials, solder_materials,
+                    mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
                     mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials,
                     ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp))
             return True

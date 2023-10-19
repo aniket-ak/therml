@@ -12,6 +12,7 @@ from dash.exceptions import PreventUpdate
 import random
 from functions import *
 import time
+import json
 
 working_dir_proj = ""
 run_name_proj = ""
@@ -61,123 +62,131 @@ header = html.H1(
     "MarlinSim TherML"
 )
 
+material_file = os.path.join("../", "3d/common/materials.json")
+with open(material_file, 'r') as file:
+    data = json.load(file)
+
+material_names = [i['name'] for i in data['materials']]
+material_names.sort()
+
 left_accordion = dbc.Accordion([
     dbc.AccordionItem([
-        html.Label("Mold"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="X", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Y", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Z", type="number",
-                    required=True, size="sm")], width=4),
+            dbc.Col([html.Label("Mold [mm]")],width=2),
+            dbc.Col([""],width=2),
+            dbc.Col([""],width=2),
+            dbc.Col([""],width=2),
+            dbc.Col(["Material"],width=2),
+            dbc.Col(["Surface Material"],width=2)
+        ]),
+        dbc.Row([
+            dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="mold_x",value=15)], width=2),
+            dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="mold_y",value=15)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="mold_z",value=5)], width=2),
+            dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="mold_material")], width=3),
+            dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="mold_surface_material")], width=3),
         ]),
 
-        html.Label("Die"),
+        html.Label("Die [mm]"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="X", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Y", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Z", type="number",
-                    required=True, size="sm")], width=4),
+            dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="die_x",value=10)], width=2),
+            dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="die_y",value=10)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="die_z",value=4)], width=2),
+            dbc.Col([dbc.Select(material_names, "Silicon", id="die_material")], width=3),
+            dbc.Col([dbc.Select(material_names, "FR4", id="die_surface_material")], width=3)
         ]),
 
-        html.Label("Underfill"),
+        html.Label("Epoxy [mm]"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="X", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Y", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Z", type="number",
-                    required=True, size="sm")], width=4),
+            dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="underfill_x",value=12)], width=2),
+            dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="underfill_y",value=12)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="underfill_z",value=4)], width=2),
+            dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="epoxy_material")], width=3),
+            dbc.Col([dbc.Select(material_names, "FR4", id="epoxy_surface_material")], width=3)
         ]),
 
-        html.Label("Bumps"),
+        html.Label("Bumps [mm]"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="X", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Y", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Z", type="number",
-                    required=True, size="sm")], width=4),
+            dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="bumps_x",value=10)], width=2),
+            dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="bumps_y",value=10)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="bumps_z",value=3)], width=2),
+            dbc.Col([dbc.Select(material_names, "SnPb Alloy", id="bumps_materials")], width=3),
+            dbc.Col([dbc.Select(material_names, "FR4", id="bumps_surface_materials")], width=3)
         ]),
 
-        html.Label("Substrate"),
+        html.Label("Substrate [mm]"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="X", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Y", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Z", type="number",
-                    required=True, size="sm")], width=4),
+            dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="substrate_x",value=15)], width=2),
+            dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="substrate_y",value=15)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="substrate_z",value=5)], width=2),
+            dbc.Col([dbc.Select(material_names, "FR4", id="substrate_materials")], width=3),
+            dbc.Col([dbc.Select(material_names, "FR4", id="substrate_surface_materials")], width=3)
         ]),
 
-        html.Label("Solder balls"),
+        html.Label("Solder balls [mm]"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="X", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Y", type="number",
-                    required=True, size="sm")], width=4),
-            dbc.Col([dbc.Input(placeholder="Z", type="number",
-                    required=True, size="sm")], width=4),
+            dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="solder_x",value=15)], width=2),
+            dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="solder_y",value=15)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="solder_z",value=2)], width=2),
+            dbc.Col([dbc.Select(material_names, "SnPb Alloy", id="solder_materials")], width=3),
+            dbc.Col([dbc.Select(material_names, "FR4", id="solder_surface_materials")], width=3)
         ]),
 
         dbc.Card([
             html.Label("Package layout"),
-            dbc.CardImg(src="http://localhost:8000/package_simplified.png")
+            dbc.CardImg(src="http://localhost:8052/package_simplified.png", style={"width": "40rem"},className = 'align-self-center')
         ], style={"margin-top": "7px"})
 
 
     ], title="Geometry and Model"),
     dbc.AccordionItem([
         html.Label("Top BC"),
-        dbc.Select(id="top-bc", options=[
+        dbc.Select([
             {"label": "Insulated", "value": "insulated"},
-            {"label": "Const. T", "value": "const_T"},
-            {"label": "Const. HTC", "value": "const_h"},
-            {"label": "Const. heat flux", "value": "const_q"}]),
+            {"label": "Const. T [C]", "value": "const_T"},
+            {"label": "Const. HTC [W/m2K]", "value": "const_h"},
+            {"label": "Const. heat flux [W/m2]", "value": "const_q"}], ["const_h"], id="top-bc"),
         dbc.Row([
             dbc.Col([dbc.Input(placeholder="BC Value", type="number"),]),
-            dbc.Col([dbc.Input(placeholder="Reference temperature", type="number")])
+            dbc.Col([dbc.Input(placeholder="Reference temperature", type="number", value=25)])
         ]),
 
         html.Label("Bottom BC"),
-        dbc.Select(id="bottom-bc", options=[
+        dbc.Select([
             {"label": "Insulated", "value": "insulated"},
-            {"label": "Const. T", "value": "const_T"},
-            {"label": "Const. HTC", "value": "const_h"},
-            {"label": "Const. heat flux", "value": "const_q"}]),
+            {"label": "Const. T [C]", "value": "const_T"},
+            {"label": "Const. HTC [W/m2K]", "value": "const_h"},
+            {"label": "Const. heat flux [W/m2]", "value": "const_q"}], ["const_h"],id="bottom-bc"),
         dbc.Row([
             dbc.Col([dbc.Input(placeholder="BC Value", type="number"),]),
-            dbc.Col([dbc.Input(placeholder="Reference temperature", type="number")])
+            dbc.Col([dbc.Input(placeholder="Reference temperature", type="number", value=25)])
         ]),
     ], title="Boundary Conditions"),
     dbc.AccordionItem([
         html.Label("Ambient temperature"),
-        dbc.Input(placeholder="Ambient temperature",
+        dbc.Input(placeholder="Ambient temperature [C]",
                   type="number", required=True, value=25),
 
         dbc.Row([
             dbc.Col([
-                html.Label("Start time"),
+                html.Label("Start time [s]"),
                 dbc.Input(placeholder="Start time", type="number", value=0.0)]),
 
-            dbc.Col([html.Label("End time"),
-                     dbc.Input(placeholder="End time", type="number")])]),
+            dbc.Col([html.Label("End time [s]"),
+                     dbc.Input(placeholder="End time", type="number", value=10.0)])]),
     ], title="Problem Setup"),
 ])
 
 settings_modal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle(
-        "Model settings")),
+        "Model and Problem Settings")),
     left_accordion,
     dbc.ModalFooter(
         dbc.Button(
-            "Submit", id="close", className="ms-auto", n_clicks=0
+            "Submit", id="save_settings", className="ms-auto", n_clicks=0
         )
     ),
-], id="modal", is_open=False,)
+], id="modal", is_open=False, size="xl")
 
 # bottom_console = dbc.
 
@@ -268,19 +277,19 @@ app.layout = dbc.Container([
         dbc.Tab(
             dbc.Row([
                     dbc.Col([
-                            dbc.Row([dbc.Col([dbc.Label("Model Settings")]), 
+                            dbc.Label("1. Select the working directory"),
+                            dbc.Input(placeholder="Working Directory", type="text", id="working_dir", required=True),
+                            dbc.Row([dbc.Col([dbc.Label("2. Model Settings")]), 
                                      dbc.Col([dbc.Button("Settings", id="open", n_clicks=0),])
                                      ],style={"margin-top": "30px"}, justify="between"),
                             settings_modal,
-                            dbc.Label("Select the working directory"),
-                            dbc.Input(placeholder="Working Directory", type="text", id="working_dir", required=True),
-                            dbc.Col(["Upload Power dissipation files"]),
+                            dbc.Col(["3. Upload Power dissipation files"]),
                             upload_component,
-                            dbc.Label("Enter a name for simulation"),
+                            dbc.Label("4. Enter a name for simulation"),
                             dbc.Input(placeholder=random_name, type="text", id="run_name")
                             ], width=3),
                     dbc.Col([
-                            dbc.Row([dbc.Col(html.H4("Scenarios") , width=6), dbc.Col([dbc.Button("Visualization", id="viz_open", n_clicks=0),], width="auto"), viz_modal
+                            dbc.Row([dbc.Col(html.H4("5. Scenarios") , width=6), dbc.Col([dbc.Button("6. Visualization", id="viz_open", n_clicks=0),], width="auto"), viz_modal
                                      ],style={"margin-top": "30px"}, justify="between"),
                             dbc.Row([
                                 dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=12, id="scenario"),
@@ -523,7 +532,8 @@ def check_working_dir(dir):
 
 @app.callback(
     Output("modal", "is_open"),
-    [Input("open", "n_clicks"), Input("close", "n_clicks")],
+    [Input("open", "n_clicks"), 
+    Input("save_settings", "n_clicks")],
     [State("modal", "is_open")],
 )
 def toggle_modal(n1, n2, is_open):

@@ -1,0 +1,44 @@
+{
+    "materials": [
+        {
+            "name": "Silicon",
+            "properties": {
+                "conductivity": "150 W/(m·K)", 
+                "cp": "700 J/(kg·K)", 
+                "density": "2329 kg/m^3"
+            }
+        },
+        {
+            "name": "SnPb Alloy",
+            "properties": {
+                "conductivity": "50 W/(m·K)",
+                "cp": "300 J/(kg·K)",
+                "density": "8900 kg/m^3"
+            }
+        },
+        {
+            "name": "Standard Epoxy",
+            "properties": {
+                "conductivity": "0.2 W/(m·K)",
+                "cp": "1400 J/(kg·K)",
+                "density": "1150 kg/m^3"
+            }
+        },
+        {
+            "name": "Epoxy Molding Compound (EMC)",
+            "properties": {
+                "conductivity": "0.4 W/(m·K)",
+                "cp": "1600 J/(kg·K)",
+                "density": "1100 kg/m^3"
+            }
+        },
+        {
+            "name": "FR4 (Glass-Reinforced Epoxy Laminate)",
+            "properties": {
+                "conductivity": "0.3 W/(m·K)",
+                "cp": "1300 J/(kg·K)",
+                "density": "1850 kg/m^3"
+            }
+        }
+    ]
+}

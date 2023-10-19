@@ -27,11 +27,11 @@ def save_to_json(file, inputs):
     mold_material, die_material, epoxy_material, bumps_materials, substrate_materials, solder_materials,
     mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials, 
     ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp) = inputs
-    print(file)
+ 
     with open(file, 'r') as f:
         settings_data = json.load(f)
 
-    print(settings_data)
+    
 
 class StdoutCapture:
     def __init__(self):

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.express as px
 import pandas as pd
-
+import json
 import h5py
 
 def read_solution(file):
@@ -20,6 +20,18 @@ def read_solution(file):
     time_.sort()
     time_ = np.array(time_)
     return solution, time_
+
+def save_to_json(file, inputs):
+    (mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
+    bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
+    mold_material, die_material, epoxy_material, bumps_materials, substrate_materials, solder_materials,
+    mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials, 
+    ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp) = inputs
+    print(file)
+    with open(file, 'r') as f:
+        settings_data = json.load(f)
+
+    print(settings_data)
 
 class StdoutCapture:
     def __init__(self):

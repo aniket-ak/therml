@@ -69,6 +69,12 @@ with open(material_file, 'r') as file:
 material_names = [i['name'] for i in data['materials']]
 material_names.sort()
 
+toast = dbc.Toast(
+        "Settings saved successfully",id="save_success_toast",header="Notification",
+        is_open=False,dismissable=True, icon="success", duration=4000, style={"position": "fixed", 
+        "top": 66, "right": 10, "width": 350},
+    )
+
 left_accordion = dbc.Accordion([
     dbc.AccordionItem([
         dbc.Row([
@@ -145,10 +151,10 @@ left_accordion = dbc.Accordion([
             {"label": "Insulated", "value": "insulated"},
             {"label": "Const. T [C]", "value": "const_T"},
             {"label": "Const. HTC [W/m2K]", "value": "const_h"},
-            {"label": "Const. heat flux [W/m2]", "value": "const_q"}], ["const_h"], id="top-bc"),
+            {"label": "Const. heat flux [W/m2]", "value": "const_q"}], ["const_h"], id="top_bc_type"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="BC Value", type="number"),]),
-            dbc.Col([dbc.Input(placeholder="Reference temperature", type="number", value=25)])
+            dbc.Col([dbc.Input(placeholder="BC Value", id="top_bc_value", value=5, type="number"),]),
+            dbc.Col([dbc.Input(placeholder="Reference temperature", id="top_bc_ref_temp", type="number", value=25)])
         ]),
 
         html.Label("Bottom BC"),
@@ -156,24 +162,25 @@ left_accordion = dbc.Accordion([
             {"label": "Insulated", "value": "insulated"},
             {"label": "Const. T [C]", "value": "const_T"},
             {"label": "Const. HTC [W/m2K]", "value": "const_h"},
-            {"label": "Const. heat flux [W/m2]", "value": "const_q"}], ["const_h"],id="bottom-bc"),
+            {"label": "Const. heat flux [W/m2]", "value": "const_q"}], ["const_h"],id="bottom_bc_type"),
         dbc.Row([
-            dbc.Col([dbc.Input(placeholder="BC Value", type="number"),]),
-            dbc.Col([dbc.Input(placeholder="Reference temperature", type="number", value=25)])
+            dbc.Col([dbc.Input(placeholder="BC Value", id="bot_bc_value", value=5, type="number"),]),
+            dbc.Col([dbc.Input(placeholder="Reference temperature", id="bot_bc_ref_temp", type="number", value=25)])
         ]),
     ], title="Boundary Conditions"),
     dbc.AccordionItem([
-        html.Label("Ambient temperature"),
-        dbc.Input(placeholder="Ambient temperature [C]",
-                  type="number", required=True, value=25),
-
         dbc.Row([
             dbc.Col([
+                html.Label("Ambient temperature"),
+                dbc.Input(placeholder="Ambient temperature [C]",id="ambient_temp", type="number", required=True, value=25),
+            ]),
+            dbc.Col([
                 html.Label("Start time [s]"),
-                dbc.Input(placeholder="Start time", type="number", value=0.0)]),
+                dbc.Input(placeholder="Start time",id="start_time", type="number", value=0.0)]),
 
-            dbc.Col([html.Label("End time [s]"),
-                     dbc.Input(placeholder="End time", type="number", value=10.0)])]),
+            dbc.Col([
+                html.Label("End time [s]"),
+                dbc.Input(placeholder="End time",id="end_time", type="number", value=10.0)])]),
     ], title="Problem Setup"),
 ])
 
@@ -181,6 +188,7 @@ settings_modal = dbc.Modal([
     dbc.ModalHeader(dbc.ModalTitle(
         "Model and Problem Settings")),
     left_accordion,
+    toast,
     dbc.ModalFooter(
         dbc.Button(
             "Submit", id="save_settings", className="ms-auto", n_clicks=0
@@ -531,13 +539,42 @@ def check_working_dir(dir):
         return False
 
 @app.callback(
+    Output("save_success_toast", "is_open"),
+    [Input("save_settings", "n_clicks")],
+    [State("modal", "is_open"), State("open", "n_clicks"),
+    State("mold_x","value"), State("mold_y","value"), State("mold_z","value"), State("die_x","value"), State("die_y","value"), State("die_z","value"),
+    State("underfill_x","value"), State("underfill_y","value"), State("underfill_z","value"), State("bumps_x","value"), State("bumps_y","value"), State("bumps_z","value"), 
+    State("substrate_x","value"), State("substrate_y","value"), State("substrate_z","value"), State("solder_x","value"), State("solder_y","value"), State("solder_z","value"),
+    State("mold_material", "value"), State("die_material", "value"), State("epoxy_material", "value"), State("bumps_materials", "value"), State("substrate_materials", "value"),
+    State("solder_materials", "value"), State("mold_surface_material", "value"), State("die_surface_material", "value"), State("epoxy_surface_material", "value"),
+    State("bumps_surface_materials", "value"), State("substrate_surface_materials", "value"), State("solder_surface_materials", "value"), State("ambient_temp", "value"),
+    State("start_time", "value"), State("end_time", "value"), State("top_bc_type", "value"), State("top_bc_value", "value"), State("top_bc_ref_temp", "value"),
+    State("bottom_bc_type", "value"), State("bot_bc_value", "value"), State("bot_bc_ref_temp", "value"),
+])
+def toggle_modal(n1, is_open, n2, mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
+                 bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
+                 mold_material, die_material, epoxy_material, bumps_materials, substrate_materials, solder_materials,
+                 mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials,
+                 ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp):
+    if n1:
+        if working_dir_proj != "" and working_dir_proj is not None:
+            print("Submit clicked")
+            settings_file = os.path.join(working_dir_proj, "settings.json")
+            save_to_json(settings_file, (mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
+                    bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
+                    mold_material, die_material, epoxy_material, bumps_materials, substrate_materials, solder_materials,
+                    mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials,
+                    ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp))
+        else:
+            return False
+    return True
+
+@app.callback(
     Output("modal", "is_open"),
-    [Input("open", "n_clicks"), 
-    Input("save_settings", "n_clicks")],
-    [State("modal", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
+    [Input("open", "n_clicks")],
+    [State("modal", "is_open")])
+def toggle_modal(n1, is_open):
+    if n1:
         return not is_open
     return is_open
 
@@ -547,7 +584,7 @@ def toggle_modal(n1, n2, is_open):
      Input("viz_close", "n_clicks")],
     [State("viz_modal", "is_open")],
 )
-def toggle_modal(n1, n2, is_open):
+def viz_toggle_modal(n1, n2, is_open):
     if n1 or n2:
         return not is_open
     return is_open

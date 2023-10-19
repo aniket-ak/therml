@@ -561,7 +561,6 @@ def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, di
     if n1:
         if working_dir_proj != "" and working_dir_proj is not None:
             settings_file = os.path.join(working_dir_proj, "settings.json")
-            print(mold_x)
             save_to_json(settings_file, (mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
                     bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
                     mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,

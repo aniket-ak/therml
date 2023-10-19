@@ -34,15 +34,16 @@ def save_to_json(file, inputs):
     mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
     mold_surface_material, die_surface_material, underfill_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials, 
     ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp) = inputs
-    print(mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x)
+
+    print(mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials)
 
     settings_file = os.path.join("../", "3d/settings.json")
     with open(settings_file, 'r') as settings_f:
         settings_data = json.load(settings_f)
 
     material_file = os.path.join("../", "3d/common/materials.json")
-    with open(material_file, 'r') as file:
-        materials = json.load(file)
+    with open(material_file, 'r') as file_:
+        materials = json.load(file_)
     
     settings_data["BC"]["Z+"]["type"] = top_bc_type
     settings_data["BC"]["Z+"]["value"]["t_amb"] = top_bc_value
@@ -112,7 +113,7 @@ def save_to_json(file, inputs):
     settings_data["end_time"] = end_time
 
     with open(file, 'w') as f:
-        json.dump(f,settings_data)
+        json.dump(settings_data,f)
 
 class StdoutCapture:
     def __init__(self):

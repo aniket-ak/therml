@@ -1,3 +1,7 @@
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import plotly.graph_objects as go
+
 class Vertex:
     def __init__(self, x, y, z):
         self.x = x
@@ -142,7 +146,7 @@ class Mesh:
     def add_element(self, element):
         self.elements.append(element)
 
-def generate_box_mesh(box, divisions=(1, 1, 1), global_nodes=None):
+def generate_box_mesh(box, divisions=(4, 4, 4), global_nodes=None):
     global_nodes = set()
     bounds = box.get_bounds()
     mesh = Mesh()
@@ -205,52 +209,130 @@ def assemble_meshes(boxes, divisions=(1, 1, 1)):
     return global_mesh
 
 # Example usage:
-box = Box(Vertex(0, 0, 0), Vertex(2, 2, 2))
-mesh = generate_box_mesh(box, divisions=(2, 2, 2))
+# box = Box(Vertex(0, 0, 0), Vertex(2, 2, 2))
+# mesh = generate_box_mesh(box, divisions=(2, 2, 2))
 
 # print("Nodes:", mesh.nodes)
 # print("Hex elements:", mesh.elements)
 
 box1 = Box(Vertex(0, 0, 0), Vertex(1, 1, 1))
-box2 = Box(Vertex(0.5, 0, 0), Vertex(1, 1, 1))
-boxes = [box1, box2]
-mesh = assemble_meshes(boxes, divisions=(2, 2, 2))
+box2 = Box(Vertex(1, 0, 0), Vertex(2, 1, 1))
+# boxes = [box1, box2]
+# mesh = assemble_meshes(boxes, divisions=(2, 2, 2))
 
-print(len(mesh.elements))
+mesh1 = generate_box_mesh(box1, divisions=(2,3,4))
+mesh2 = generate_box_mesh(box2, divisions=(4,2,2))
 
-# import matplotlib.pyplot as plt
-# from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+global_nodes = set()
+global_mesh = Mesh()
 
-# def visualize_mesh(mesh):
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111, projection='3d')
+global_mesh.nodes.extend(mesh1.nodes)
+global_mesh.elements.extend(mesh1.elements)
+
+global_mesh.nodes.extend(mesh2.nodes)
+global_mesh.elements.extend(mesh2.elements)
+
+
+print(len(global_mesh.elements))
+
+def visualize_mesh_plotly(mesh):
+    # For the mesh
+    x, y, z = [], [], []
+    i, j, k = [], [], []
+
+    # For the edges
+    lines = []
+
+    # Loop through each hex element to extract vertices and faces
+    for element in mesh.elements:
+        # Append node coordinates to lists
+        for node in element.nodes:
+            x.append(node.x)
+            y.append(node.y)
+            z.append(node.z)
+        
+        base_index = len(x) - 8
+        face_indices = [
+            [0, 1, 5, 4],
+            [7, 6, 2, 3],
+            [0, 3, 2, 1],
+            [7, 4, 5, 6],
+            [0, 4, 7, 3],
+            [1, 2, 6, 5]
+        ]
+
+        # Append face indices to lists
+        for face in face_indices:
+            i.append(base_index + face[0])
+            j.append(base_index + face[1])
+            k.append(base_index + face[2])
+            i.append(base_index + face[0])
+            j.append(base_index + face[2])
+            k.append(base_index + face[3])
+        
+        # Define edges of the hex element
+        edges = [
+            [0, 1], [1, 2], [2, 3], [3, 0],
+            [4, 5], [5, 6], [6, 7], [7, 4],
+            [0, 4], [1, 5], [2, 6], [3, 7]
+        ]
+
+        # Append the edges
+        for edge in edges:
+            lines.append(go.Scatter3d(x=[x[base_index + edge[0]], x[base_index + edge[1]]],
+                                      y=[y[base_index + edge[0]], y[base_index + edge[1]]],
+                                      z=[z[base_index + edge[0]], z[base_index + edge[1]]],
+                                      mode='lines',
+                                      line=dict(color='red', width=2)))
+
+    # Create mesh3d plot
+    fig = go.Figure(
+        data=[
+            go.Mesh3d(
+                x=x, y=y, z=z,
+                i=i, j=j, k=k,
+                opacity=0.6,
+                color='cyan'
+            )
+        ]
+    )
+
+    # Add the lines (edges)
+    for line in lines:
+        fig.add_trace(line)
+
+    fig.show()
+
+def visualize_mesh(mesh):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
     
-#     # Draw each hex element
-#     for element in mesh.elements:
-#         # Extract node coordinates for easier referencing
-#         coords = [(node.x, node.y, node.z) for node in element.nodes]
+    # Draw each hex element
+    for element in mesh.elements:
+        # Extract node coordinates for easier referencing
+        coords = [(node.x, node.y, node.z) for node in element.nodes]
         
-#         # Faces of the hexahedron
-#         faces = [
-#             [coords[0], coords[1], coords[5], coords[4]],
-#             [coords[7], coords[6], coords[2], coords[3]],
-#             [coords[0], coords[3], coords[2], coords[1]],
-#             [coords[7], coords[4], coords[5], coords[6]],
-#             [coords[0], coords[4], coords[7], coords[3]],
-#             [coords[1], coords[2], coords[6], coords[5]]
-#         ]
+        # Faces of the hexahedron
+        faces = [
+            [coords[0], coords[1], coords[5], coords[4]],
+            [coords[7], coords[6], coords[2], coords[3]],
+            [coords[0], coords[3], coords[2], coords[1]],
+            [coords[7], coords[4], coords[5], coords[6]],
+            [coords[0], coords[4], coords[7], coords[3]],
+            [coords[1], coords[2], coords[6], coords[5]]
+        ]
         
-#         ax.add_collection3d(Poly3DCollection(faces, facecolors='cyan', linewidths=1, edgecolors='r', alpha=0.5))
+        ax.add_collection3d(Poly3DCollection(faces, facecolors='cyan', linewidths=1, edgecolors='r', alpha=0.5))
 
-#     ax.set_xlabel('X')
-#     ax.set_ylabel('Y')
-#     ax.set_zlabel('Z')
-#     plt.show()
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.show()
 
-# # Example usage:
+# Example usage:
 # box1 = Box(Vertex(0, 0, 0), Vertex(0.5, 0.5, 0.5))
 # box2 = Box(Vertex(0.6, 0, 0), Vertex(1, 1, 1))
 # boxes = [box1, box2]
 # mesh = assemble_meshes(boxes, divisions=(2, 2, 2))
 
-# visualize_mesh(mesh)
+visualize_mesh_plotly(global_mesh)

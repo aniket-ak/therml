@@ -216,6 +216,12 @@ function assemble_meshes(boxes::Vector{Box})
     return global_mesh
 end
 
+function centroid(element::HexElement)
+    avg_x = sum(node.x for node in element.nodes) / 8.0
+    avg_y = sum(node.y for node in element.nodes) / 8.0
+    avg_z = sum(node.z for node in element.nodes) / 8.0
+    return avg_x, avg_y, avg_z
+end
 
 
 # Example usage:
@@ -225,7 +231,19 @@ mat_ = MaterialProperties(0.3,1000,10);
 mesh_ = MeshDetails(2,2,2)
 box_1 = Box(vertex_a, vertex_b, mat_, mesh_);
 
-box_2 = Box(Vertex(1.0, 0.0, 0.0), Vertex(2.0, 1.0, 1.0), mat_, mesh_)
+box_2 = Box(Vertex(1.0, 0.0, 0.0), Vertex(2.0, 1.0, 1.0), mat_, MeshDetails(4,2,2))
 # println(box_1)
 
 mesh_ = assemble_meshes([box_1, box_2])
+
+cell_grid = []
+centroids_x, centroids_y, centroids_z = [], [], []
+for element in mesh_.elements
+    e_ = centroid_x, centroid_y, centroid_z = centroid(element)
+    push!(cell_grid, e_)
+    push!(centroids_x, centroid_x)
+    push!(centroids_y, centroid_y)
+    push!(centroids_z, centroid_z)
+end
+
+global_matrix_size = (size(unique(centroids_x))[1], size(unique(centroids_y))[1], size(unique(centroids_z))[1])

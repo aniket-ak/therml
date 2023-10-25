@@ -112,12 +112,6 @@ struct Node
     z::Float64
 end
 
-function ==(n1::Node, n2::Node)
-    return n1.x == n2.x && n1.y == n2.y && n1.z == n2.z
-end
-
-Base.hash(n::Node, h::UInt) = hash(n.x, hash(n.y, hash(n.z, h)))
-
 mutable struct HexElement
     nodes::Vector{Node}
 end
@@ -175,6 +169,29 @@ function generate_box_mesh(box::Box)
     return local_mesh
 end
 
+import Base: ==
+
+function ==(n1::Node, n2::Node)
+    return isapprox(n1.x, n2.x) && isapprox(n1.y, n2.y) && isapprox(n1.z, n2.z)
+end
+
+function ==(e1::HexElement, e2::HexElement)
+    return all(e1.nodes .== e2.nodes)
+end
+
+
+# Define hash for Node based on its coordinates
+function Base.hash(n::Node, h::UInt)
+    return hash(n.x, hash(n.y, hash(n.z, h)))
+end
+
+# Define hash for HexElement based on the hash of its nodes
+function Base.hash(e::HexElement, h::UInt)
+    node_hashes = [hash(node) for node in e.nodes]
+    return foldl(hash, node_hashes, init=h)
+end
+
+
 function assemble_meshes(boxes::Vector{Box})
     global_mesh = Mesh([], [])
 
@@ -183,14 +200,14 @@ function assemble_meshes(boxes::Vector{Box})
 
         # Check node duplicates and add to global mesh
         for node in box_mesh.nodes
-            if !(node in global_mesh.nodes)
+            if !any(existing_node -> existing_node == node, global_mesh.nodes)
                 push!(global_mesh.nodes, node)
             end
         end
 
         # Just add the elements directly to the global mesh
         for element in box_mesh.elements
-            if !(element in global_mesh.elements)
+            if !any(existing_element -> existing_element == element, global_mesh.elements)
                 push!(global_mesh.elements, element)
             end
         end
@@ -200,14 +217,15 @@ function assemble_meshes(boxes::Vector{Box})
 end
 
 
-# Example usage:
-vertex_a = Vertex(0.0, 0.0, 0.0)
-vertex_b = Vertex(1.0, 1.0, 1.0)
-mat_ = MaterialProperties(0.3,1000,10)
-mesh_ = MeshDetails(2,2,2)
-box_1 = Box(vertex_a, vertex_b, mat_, mesh_)
 
-box_2 = Box(Vertex(0.5, 0.0, 0.0), Vertex(1.0, 1.0, 1.0), mat_, mesh_)
+# Example usage:
+vertex_a = Vertex(0.0, 0.0, 0.0);
+vertex_b = Vertex(1.0, 1.0, 1.0);
+mat_ = MaterialProperties(0.3,1000,10);
+mesh_ = MeshDetails(2,2,2)
+box_1 = Box(vertex_a, vertex_b, mat_, mesh_);
+
+box_2 = Box(Vertex(1.0, 0.0, 0.0), Vertex(2.0, 1.0, 1.0), mat_, mesh_)
 # println(box_1)
 
 mesh_ = assemble_meshes([box_1, box_2])

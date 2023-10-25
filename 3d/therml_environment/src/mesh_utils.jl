@@ -106,17 +106,17 @@ function intersects(b1::Box, b2::Box)
     return true
 end
 
-mutable struct Node
+struct Node
     x::Float64
     y::Float64
     z::Float64
-    id::Int
-
-    Node(x, y, z) = new(x, y, z, 1)
 end
 
-Base.isequal(n1::Node, n2::Node) = n1.x == n2.x && n1.y == n2.y && n1.z == n2.z
-Base.hash(n::Node, h::UInt) = hash((n.x, n.y, n.z), h)
+function ==(n1::Node, n2::Node)
+    return n1.x == n2.x && n1.y == n2.y && n1.z == n2.z
+end
+
+Base.hash(n::Node, h::UInt) = hash(n.x, hash(n.y, hash(n.z, h)))
 
 mutable struct HexElement
     nodes::Vector{Node}
@@ -125,35 +125,34 @@ end
 mutable struct Mesh
     nodes::Vector{Node}
     elements::Vector{HexElement}
-    
-    Mesh() = new(Node[], HexElement[])
 end
 
 function generate_box_mesh(box::Box)
-    mesh = Mesh()
     bounds = get_bounds(box)
+    local_mesh = Mesh([], [])
     divisions = (box.mesh_details.elements_per_edge_x, box.mesh_details.elements_per_edge_y, box.mesh_details.elements_per_edge_z)
-    
+
     dx = (bounds[:xmax] - bounds[:xmin]) / divisions[1]
     dy = (bounds[:ymax] - bounds[:ymin]) / divisions[2]
     dz = (bounds[:zmax] - bounds[:zmin]) / divisions[3]
-    
-    node_grid = []
 
-    for i in 1:(divisions[1] + 1)
+    node_grid = []
+    for i in 1:divisions[1] + 1
         push!(node_grid, [])
-        for j in 1:(divisions[2] + 1)
+        for j in 1:divisions[2] + 1
             push!(node_grid[end], [])
-            for k in 1:(divisions[3] + 1)
-                x = bounds[:xmin] + (i - 1) * dx
-                y = bounds[:ymin] + (j - 1) * dy
-                z = bounds[:zmin] + (k - 1) * dz
+            for k in 1:divisions[3] + 1
+                x = bounds[:xmin] + (i-1) * dx
+                y = bounds[:ymin] + (j-1) * dy
+                z = bounds[:zmin] + (k-1) * dz
+
                 node = Node(x, y, z)
+                push!(local_mesh.nodes, node)
                 push!(node_grid[end][end], node)
             end
         end
     end
-    
+
     for i in 1:divisions[1]
         for j in 1:divisions[2]
             for k in 1:divisions[3]
@@ -168,41 +167,38 @@ function generate_box_mesh(box::Box)
                     node_grid[i][j+1][k+1]
                 ]
                 hex_element = HexElement(nodes)
-                push!(mesh.elements, hex_element)
+                push!(local_mesh.elements, hex_element)
             end
         end
     end
 
-    return mesh
+    return local_mesh
 end
 
 function assemble_meshes(boxes::Vector{Box})
-    global_nodes = Node[]
-    global_mesh = Mesh()
-    
+    global_mesh = Mesh([], [])
+
     for box in boxes
         box_mesh = generate_box_mesh(box)
-        
-        # Check nodes and avoid duplicates
+
+        # Check node duplicates and add to global mesh
         for node in box_mesh.nodes
-            println("node --> ", node)
-            idx = findfirst(isequal(node), global_nodes)
-            if isnothing(idx)
-                push!(global_nodes, node)
-            else
-                node = global_nodes[idx]
+            if !(node in global_mesh.nodes)
+                push!(global_mesh.nodes, node)
             end
-            push!(global_mesh.nodes, node)
         end
-        
-        # Add elements
-        for elem in box_mesh.elements
-            push!(global_mesh.elements, elem)
+
+        # Just add the elements directly to the global mesh
+        for element in box_mesh.elements
+            if !(element in global_mesh.elements)
+                push!(global_mesh.elements, element)
+            end
         end
     end
 
     return global_mesh
 end
+
 
 # Example usage:
 vertex_a = Vertex(0.0, 0.0, 0.0)

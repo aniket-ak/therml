@@ -275,8 +275,12 @@ function generate_mesh(working_dir)
     end
 
 
-    return sort(unique(X_mesh)), sort(unique(Y_mesh)), sort(unique(Z_mesh))
+    nodes = X_mesh, Y_mesh, Z_mesh = sort(unique(X_mesh)), sort(unique(Y_mesh)), sort(unique(Z_mesh))
+
+    num_elements_x, num_elements_y, num_elements_z = (size(X_mesh)[1]-1, size(Y_mesh)[1]-1, size(Z_mesh)[1]-1)
+    elements = zeros(num_elements_x, num_elements_y, num_elements_z)
+
+    return nodes, elements
 end
 
-X_mesh, Y_mesh, Z_mesh = generate_mesh("/Users/aniket/Documents/MarlinSim/04_testing/scenarios/")
-
+nodes, elements = generate_mesh("/Users/aniket/Documents/MarlinSim/04_testing/scenarios/")

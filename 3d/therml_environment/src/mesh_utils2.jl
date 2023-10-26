@@ -64,19 +64,27 @@ function generate_mesh(working_dir)
     Y = [y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold]
     Z = [z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die]
 
-    println("\n-----------------------------------------")
-    println("Domain extents : ")
-    println("Direction\t","Min           \t", "Max")
-    println("X        \t", minimum(X) ," \t", maximum(X))
-    println("Y        \t", minimum(Y) ," \t", maximum(Y))
-    println("Z        \t", minimum(Z) ," \t", maximum(Z))
-    println("-----------------------------------------\n")
+    # println("\n-----------------------------------------")
+    # println("Domain extents : ")
+    # println("Direction\t","Min           \t", "Max")
+    # println("X        \t", minimum(X) ," \t", maximum(X))
+    # println("Y        \t", minimum(Y) ," \t", maximum(Y))
+    # println("Z        \t", minimum(Z) ," \t", maximum(Z))
+    # println("-----------------------------------------\n")
 
     X, Y, Z = sort(unique(X)), sort(unique(Y)), sort(unique(Z))
 
-    X_mesh = [X[1],X[end]]
-    Y_mesh = [Y[1],Y[end]]
-    Z_mesh = [Z[1],Z[end]]
+    ghost_x_min = X[1] - bodies_["die"]["mesh"]["size"]["dx"]
+    ghost_x_max = X[end] + bodies_["die"]["mesh"]["size"]["dx"]
+    ghost_y_min = Y[1] - bodies_["die"]["mesh"]["size"]["dy"]
+    ghost_y_max = Y[end] - bodies_["die"]["mesh"]["size"]["dy"]
+    ghost_z_min = Z[1] - bodies_["die"]["mesh"]["size"]["dz"]
+    ghost_z_max =  Z[end] - bodies_["die"]["mesh"]["size"]["dz"]
+    
+
+    X_mesh = [ghost_x_min, X[1],X[end], ghost_x_max]
+    Y_mesh = [ghost_y_min, Y[1],Y[end], ghost_y_max]
+    Z_mesh = [ghost_z_min, Z[1],Z[end], ghost_z_max]
 
     for (i, mesh_point) in enumerate(X)
         if i > 1
@@ -267,7 +275,7 @@ function generate_mesh(working_dir)
     end
 
 
-    return X_mesh, Y_mesh, Z_mesh
+    return sort(unique(X_mesh)), sort(unique(Y_mesh)), sort(unique(Z_mesh))
 end
 
 X_mesh, Y_mesh, Z_mesh = generate_mesh("/Users/aniket/Documents/MarlinSim/04_testing/scenarios/")

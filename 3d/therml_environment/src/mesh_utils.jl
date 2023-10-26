@@ -262,4 +262,5 @@ end
 
 function generate_mesh(boxes::Vector{Box})
     println(boxes)
+    
 end

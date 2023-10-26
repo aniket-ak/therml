@@ -29,6 +29,7 @@ mutable struct MeshDetails
     elements_per_edge_x::Int
     elements_per_edge_y::Int
     elements_per_edge_z::Int
+    precedence::Int
 end
 
 mutable struct Box
@@ -228,10 +229,10 @@ end
 vertex_a = Vertex(0.0, 0.0, 0.0);
 vertex_b = Vertex(1.0, 1.0, 1.0);
 mat_ = MaterialProperties(0.3,1000,10);
-mesh_ = MeshDetails(2,2,2)
+mesh_ = MeshDetails(2,2,2,100)
 box_1 = Box(vertex_a, vertex_b, mat_, mesh_);
 
-box_2 = Box(Vertex(1.0, 0.0, 0.0), Vertex(2.0, 1.0, 1.0), mat_, MeshDetails(4,2,2))
+box_2 = Box(Vertex(1, 0.0, 0.0), Vertex(2.0, 2.0, 2.0), mat_, MeshDetails(4,2,2,100))
 # println(box_1)
 
 mesh_ = assemble_meshes([box_1, box_2])
@@ -247,3 +248,18 @@ for element in mesh_.elements
 end
 
 global_matrix_size = (size(unique(centroids_x))[1], size(unique(centroids_y))[1], size(unique(centroids_z))[1])
+
+function split_cube(box_1::Box, box_2::Box)
+    box_1_bounds = get_bounds(box_1)
+    box_2_bounds = get_bounds(box_2)
+
+    if !intersects(box_1, box_2)
+        return box_1,box_2
+    else
+        "a"
+    end
+end
+
+function generate_mesh(boxes::Vector{Box})
+    println(boxes)
+end

@@ -366,19 +366,20 @@ function real_main()
     progress_file = open(progress_file_name, "w")
     global_logger(TerminalLogger(progress_file))
 
-    include("/root/therml/therml/3d/therml_environment/src/unctions_fvm_3d.jl")
+    #include("/root/therml/therml/3d/therml_environment/src/unctions_fvm_3d.jl")
 
     f = open(joinpath(working_dir,"settings.json"), "r")
     settings = JSON.parse(f)
     println(Dates.format(now(), "HH:MM:SS"))
-    # sol = solve_(working_dir, scenario_name);
-    sol = Base.invokelatest(solve_, working_dir, scenario_name, settings);
-    # do_plotting(sol, sol_wd, false);
-    Base.invokelatest(do_plotting, sol, sol_wd, settings, scenario_name, false)
-    # save_fields(sol,sol_wd);
-    Base.invokelatest(save_fields, sol, sol_wd, scenario_name)
+    sol = solve_(working_dir, scenario_name);
+    #sol = Base.invokelatest(solve_, working_dir, scenario_name, settings);
+    do_plotting(sol, sol_wd, false);
+    #Base.invokelatest(do_plotting, sol, sol_wd, settings, scenario_name, false)
+    save_fields(sol,sol_wd);
+    #Base.invokelatest(save_fields, sol, sol_wd, scenario_name)
     println(Dates.format(now(), "HH:MM:SS"))
     flush(stdout)
+    exit()
 end
 
 end

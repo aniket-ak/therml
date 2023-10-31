@@ -4,16 +4,20 @@ import plotly.express as px
 import pandas as pd
 
 import h5py
-file1 = "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/solution.sol"
+file1 = "/Users/aniket/Documents/MarlinSim/04_testing/scenarios/Calcite_Tiger/Solution/file_1.csv__solution.sol"
 f = h5py.File(file1, "r")
 
 time_duration = len(f['solution'].keys())
-sol_shape = np.array(list(f['solution']['1'])).T.shape
+keys = list(f['solution'].keys())
+keys_ = [float(i) for i in keys]
+keys_.sort()
+sol_shape = np.array(list(f['solution'][keys[0]])).T.shape
 
 solution = np.empty((tuple([time_duration] + list(sol_shape))))
-solution.shape
-for i in range(1,time_duration):
-    solution[i,:] = np.array(list(f['solution'][str(i)])).T
 
-plt.matshow(solution[-1,:,:,1])
+for i,k in enumerate(keys_):
+    solution[i,:] = np.array(list(f['solution'][str(k)])).T
+
+plt.matshow(solution[-1,:,:,0])
+plt.colorbar()
 plt.show()

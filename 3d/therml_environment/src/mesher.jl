@@ -283,4 +283,4 @@ function generate_mesh(working_dir)
     return nodes, elements
 end
 
-nodes, elements = generate_mesh("/root/therml/therml/3d/")
+nodes, elements = generate_mesh("/Users/aniket/Documents/MarlinSim/04_testing/scenarios/")

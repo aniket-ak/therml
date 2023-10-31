@@ -370,14 +370,18 @@ function real_main()
 
     f = open(joinpath(working_dir,"settings.json"), "r")
     settings = JSON.parse(f)
-    println(Dates.format(now(), "HH:MM:SS"))
-    sol = solve_(working_dir, scenario_name);
-    #sol = Base.invokelatest(solve_, working_dir, scenario_name, settings);
-    do_plotting(sol, sol_wd, false);
-    #Base.invokelatest(do_plotting, sol, sol_wd, settings, scenario_name, false)
-    save_fields(sol,sol_wd);
-    #Base.invokelatest(save_fields, sol, sol_wd, scenario_name)
-    println(Dates.format(now(), "HH:MM:SS"))
+    date_start = now()
+    println("Start solution at : ", Dates.format(date_start, "HH:MM:SS"))
+    sol = solve_(working_dir, scenario_name, settings);
+    
+    do_plotting(sol, sol_wd, settings, scenario_name, false);
+    
+    save_fields(sol, sol_wd, scenario_name);
+    
+    date_end = now()
+    println("End solution at : ", Dates.format(date_end, "HH:MM:SS"))
+    println("Time taken for solution : ", (date_end-date_start)/Millisecond(1000), " [s]")
+
     flush(stdout)
     exit()
 end

@@ -523,12 +523,14 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    source, k, rho, cp, (delta_x, delta_y, delta_z), settings = p
-    alpha_x = (k/(rho*cp)) / delta_x^2
-    alpha_y = (k/(rho*cp)) / delta_y^2
-    alpha_z = (k/(rho*cp)) / delta_z^2
+    settings = p
+    alpha_x = 0.1 #(k/(rho*cp)) / delta_x^2
+    alpha_y = 0.1 #(k/(rho*cp)) / delta_y^2
+    alpha_z = 0.1 #(k/(rho*cp)) / delta_z^2
 
     Nx, Ny, Nz = size(u)
+
+    source = ones(Nx, Ny, Nz) # define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
     Threads.@threads for k_ in range(2, Nz-1)
         Threads.@threads for j_ in range(2, Ny-1)
@@ -542,7 +544,7 @@ function conduction_3d_loop!(du, u, p, t)
         end
     end
 
-    apply_bc(u, settings, delta_x, delta_y, delta_z)
+    apply_bc(u, settings, 0.1, 0.1, 0.1)
 
 end
 
@@ -562,11 +564,12 @@ function configure_problem_klu!(u0,p)
     return prob_conduction_3d_sparse, algorithm
 end
 
-function configure_problem_ode!(u0,p,settings)
+function configure_problem_ode!(u0,settings)
     start_time = settings["start_time"]
     end_time = settings["end_time"]
 
-    problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
+    # problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
+    problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time))
     algorithm = ""
 
     return problem, algorithm
@@ -604,22 +607,29 @@ end
 
 function solve_(working_dir, power_file, settings)
 
-    k = settings["model"]["bodies"]["die"]["material"]["k"]
-    rho = settings["model"]["bodies"]["die"]["material"]["rho"]
-    cp = settings["model"]["bodies"]["die"]["material"]["cp"]
+    # k = settings["model"]["bodies"]["die"]["material"]["k"]
+    # rho = settings["model"]["bodies"]["die"]["material"]["rho"]
+    # cp = settings["model"]["bodies"]["die"]["material"]["cp"]
     
     # (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
     nodes, u0 = generate_mesh(working_dir)
+    Nx,Ny,Nz = size(u0)
     
-    source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
+    # source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
-    p = (source, k, rho, cp, (delta_x, delta_y, delta_z), settings)
+    p = settings #(source, k, rho, cp, (delta_x, delta_y, delta_z), settings)
     u0 = initialize_domain!(u0, settings)
 
     # problem, algorithm = configure_problem_klu!(u0,p)
     # sol = solve(problem, algorithm, saveat=1.0,progress=true, maxiters=100, abstol=1e-3, reltol=1e-3)
 
-    problem,_ = configure_problem_ode!(u0,p,settings)
+    # problem,_ = configure_problem_ode!(u0,p,settings)
+    # problem,_ = configure_problem_ode!(u0,settings)
+    start_time = settings["start_time"]
+    end_time = settings["end_time"]
+
+    problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
+    println("Completed problem definition")
     # sol = solve(problem, saveat=1.0,progress=true, progress_steps = 1,
     #             maxiters=1000, abstol=1e-4, reltol=1e-4)
 

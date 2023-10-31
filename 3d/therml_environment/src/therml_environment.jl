@@ -91,7 +91,7 @@ function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
 end
 
 function do_plotting(sol, sol_wd, settings, scenario_name, interpolation)
-    result_ = convert_units("temperature", sol[end][2:end-1,2:end-1,2], "K", "C")'
+    result_ = convert_units("temperature", sol[end, 2:end-1,2:end-1,1], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
     z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
@@ -309,12 +309,12 @@ function interpolate_(x,y,z,new_x,new_y)
     return new_z
 end
 
-function save_fields(sol,sol_wd, scenario_name)
+function save_fields(sol, t_, sol_wd, scenario_name)
     h5open(joinpath(sol_wd,scenario_name*"__solution.sol"), "w") do file
         g = HDF5.create_group(file, "solution")
 
-        for (i,t) in enumerate(sol.t)
-            g[string(i)] = sol.u[i]
+        for (i,t) in enumerate(t_)
+            g[string(i)] = sol[i]
         end
     end
 end
@@ -338,10 +338,23 @@ function solve_(working_dir, power_file, settings)
     # sol = solve(problem, algorithm, saveat=1.0,progress=true, maxiters=100, abstol=1e-3, reltol=1e-3)
 
     problem,_ = configure_problem_ode!(u0,p,settings)
-    sol = solve(problem, saveat=1.0,progress=true, progress_steps = 1,
-                maxiters=1000, abstol=1e-4, reltol=1e-4)
+    # sol = solve(problem, saveat=1.0,progress=true, progress_steps = 1,
+    #             maxiters=1000, abstol=1e-4, reltol=1e-4)
 
-    return sol
+    n_steps = settings["end_time"]
+    dt = settings["dt"]
+    sol = zeros((n_steps, size(u0)...))
+    t_ = zeros(n_steps)
+
+    integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=1000)
+    for i in range(1,stop=n_steps)
+        step!(integrator, dt, true)
+        t,u = integrator.t, integrator.u
+        sol[i,:,:,:] = u
+        t_[i] = t
+    end
+
+    return sol, t_
 end
 
 function real_main()
@@ -372,11 +385,11 @@ function real_main()
     settings = JSON.parse(f)
     date_start = now()
     println("Start solution at : ", Dates.format(date_start, "HH:MM:SS"))
-    sol = solve_(working_dir, scenario_name, settings);
+    sol,t_ = solve_(working_dir, scenario_name, settings);
     
-    do_plotting(sol, sol_wd, settings, scenario_name, false);
+    # do_plotting(sol, sol_wd, settings, scenario_name, false);
     
-    save_fields(sol, sol_wd, scenario_name);
+    save_fields(sol, t_, sol_wd, scenario_name);
     
     date_end = now()
     println("End solution at : ", Dates.format(date_end, "HH:MM:SS"))

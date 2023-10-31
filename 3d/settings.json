@@ -187,5 +187,6 @@
         "smallest_thickness": 0.0005
     },
     "start_time": 0,
-    "end_time": 10
+    "end_time": 10,
+    "dt": 1
 }

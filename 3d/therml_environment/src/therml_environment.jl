@@ -27,17 +27,17 @@ end
 int(x) = floor(Int, x)
 
 function create_mesh(settings)
-    x_length = settings["model"]["bodies"]["die"]["size"]["X"]
-    y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
-    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+    x_length = settings[:model]["bodies"]["die"]["size"]["X"]
+    y_length = settings[:model]["bodies"]["die"]["size"]["Y"]
+    z_length = settings[:model]["bodies"]["die"]["size"]["Z"]
 
     x_normalized = x_length/z_length
     y_normalized = y_length/z_length
     z_normalized = z_length/z_length
 
-    Nx = 2*settings["model"]["num_sources"]["X"] + 2 # including ghost cells
-    Ny = 2*settings["model"]["num_sources"]["Y"] + 2 # including ghost cells
-    Nz = max(2, 2*int(settings["model"]["bodies"]["die"]["size"]["Z"]/settings["model"]["smallest_thickness"])) + 2
+    Nx = 2*settings[:model]["num_sources"]["X"] + 2 # including ghost cells
+    Ny = 2*settings[:model]["num_sources"]["Y"] + 2 # including ghost cells
+    Nz = max(2, 2*int(settings[:model]["bodies"]["die"]["size"]["Z"]/settings[:model]["smallest_thickness"])) + 2
     
     x_mesh = range(0, stop = x_normalized, length = Nx+1)
     y_mesh = range(0, stop = y_normalized, length = Ny+1)
@@ -47,11 +47,8 @@ function create_mesh(settings)
     return (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh)
 end
 
-function generate_mesh(working_dir)
-    f = open(joinpath(working_dir,"settings.json"), "r")
-    settings = JSON.parse(f)
-    
-    bodies_ = settings["model"]["bodies"]
+function generate_mesh(settings)
+    bodies_ = settings[:model]["bodies"]
 
     x_start_solder = -bodies_["solder"]["size"]["X"]/2
     x_end_solder = bodies_["solder"]["size"]["X"]/2
@@ -338,8 +335,8 @@ function build_domain(Nx,Ny,Nz)
 end
 
 function initialize_domain!(u0, settings)
-    temperature_base_units = settings["units"]["temperature"]
-    T_initial = convert_units("temperature", settings["IC"], temperature_base_units, "K")
+    temperature_base_units = settings[:units]["temperature"]
+    T_initial = convert_units("temperature", settings[:IC], temperature_base_units, "K")
     u0 = u0 .+ T_initial
     return u0
 end
@@ -348,9 +345,9 @@ function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
 
-    x_length = settings["model"]["bodies"]["die"]["size"]["X"]
-    y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
-    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+    x_length = settings[:model]["bodies"]["die"]["size"]["X"]
+    y_length = settings[:model]["bodies"]["die"]["size"]["Y"]
+    z_length = settings[:model]["bodies"]["die"]["size"]["Z"]
 
     x_normalized = x_length/z_length
     y_normalized = y_length/z_length
@@ -377,7 +374,7 @@ function do_plotting(sol, sol_wd, settings, scenario_name, interpolation)
     result_ = convert_units("temperature", sol[end, 2:end-1,2:end-1,1], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
-    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+    z_length = settings[:model]["bodies"]["die"]["size"]["Z"]
     
     if interpolation == true
         p = plot(
@@ -427,97 +424,97 @@ function convert_units(quantity, value, from_units, to_units)
 end
 
 function apply_bc(u, settings, delta_x, delta_y, delta_z)
-    k = settings["model"]["bodies"]["die"]["material"]["k"]
-    rho = settings["model"]["bodies"]["die"]["material"]["rho"]
-    cp = settings["model"]["bodies"]["die"]["material"]["cp"]
+    k = settings[:model]["bodies"]["die"]["material"]["k"]
+    rho = settings[:model]["bodies"]["die"]["material"]["rho"]
+    cp = settings[:model]["bodies"]["die"]["material"]["cp"]
 
     # At X-
     side = "X-"
-    if settings["BC"]["X-"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings["BC"]["X-"]["value"]["value"], settings["units"]["temperature"], "K") 
+    if settings[:BC]["X-"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings[:BC]["X-"]["value"]["value"], settings[:units]["temperature"], "K") 
         u[1,:,:] .= 2*const_temp .- u[2,:,:]
-    elseif settings["BC"]["X-"]["type"] == "insulated"
+    elseif settings[:BC]["X-"]["type"] == "insulated"
         u[1,:,:] .= u[2,:,:]
-    elseif settings["BC"]["X-"]["type"] == "const_flux"
-        u[1,:,:] .= u[2,:,:] .+ settings["BC"]["X-"]["value"]["value"] * (delta_x/k)
-    elseif settings["BC"]["X-"]["type"] == "HTC"
-        h = settings["BC"]["X-"]["value"]["value"]
-        t_amb = convert_units("temperature", settings["BC"]["X-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
+    elseif settings[:BC]["X-"]["type"] == "const_flux"
+        u[1,:,:] .= u[2,:,:] .+ settings[:BC]["X-"]["value"]["value"] * (delta_x/k)
+    elseif settings[:BC]["X-"]["type"] == "HTC"
+        h = settings[:BC]["X-"]["value"]["value"]
+        t_amb = convert_units("temperature", settings[:BC]["X-"]["value"]["t_amb"], settings[:units]["temperature"], "K")
         u[1,:,:] .= u[2,:,:]*(1 - delta_x * h/k) .+ (h*delta_x/k) * t_amb
     end
 
     # At X+
     side = "X+"
-    if settings["BC"]["X+"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings["BC"]["X+"]["value"]["value"], settings["units"]["temperature"], "K") 
-        u[end,:,:] .= 2*settings["BC"]["X+"]["value"] .- u[end-1,:,:]
-    elseif settings["BC"]["X+"]["type"] == "insulated"
+    if settings[:BC]["X+"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings[:BC]["X+"]["value"]["value"], settings[:units]["temperature"], "K") 
+        u[end,:,:] .= 2*settings[:BC]["X+"]["value"] .- u[end-1,:,:]
+    elseif settings[:BC]["X+"]["type"] == "insulated"
         u[end,:,:] .= u[end-1,:,:]
-    elseif settings["BC"]["X+"]["type"] == "const_flux"
-        u[end,:,:] .= u[end-1,:,:] .+ settings["BC"]["X+"]["value"]["value"] * (delta_x/k)
-    elseif settings["BC"]["X+"]["type"] == "HTC"
-        h = settings["BC"]["X+"]["value"]["value"]
-        t_amb = convert_units("temperature", settings["BC"]["X+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
+    elseif settings[:BC]["X+"]["type"] == "const_flux"
+        u[end,:,:] .= u[end-1,:,:] .+ settings[:BC]["X+"]["value"]["value"] * (delta_x/k)
+    elseif settings[:BC]["X+"]["type"] == "HTC"
+        h = settings[:BC]["X+"]["value"]["value"]
+        t_amb = convert_units("temperature", settings[:BC]["X+"]["value"]["t_amb"], settings[:units]["temperature"], "K")
         u[end,:,:] .= u[end-1,:,:]*(1 - delta_x * h/k) .+ (h*delta_x/k) * t_amb
     end
 
     # Y-
     side = "Y-"
-    if settings["BC"]["Y-"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings["BC"]["Y-"]["value"]["value"], settings["units"]["temperature"], "K") 
+    if settings[:BC]["Y-"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings[:BC]["Y-"]["value"]["value"], settings[:units]["temperature"], "K") 
         u[:,1,:] .= 2*const_temp .- u[:,2,:]
-    elseif settings["BC"]["Y-"]["type"] == "insulated"
+    elseif settings[:BC]["Y-"]["type"] == "insulated"
         u[:,1,:] .= u[:,2,:]
-    elseif settings["BC"]["Y-"]["type"] == "const_flux"
-        u[:,1,:] .= u[:,2,:] .+ settings["BC"]["Y-"]["value"]["value"] * (delta_y/k)
-    elseif settings["BC"]["Y-"]["type"] == "HTC"
-        h = settings["BC"]["Y-"]["value"]["value"]
-        t_amb = convert_units("temperature", settings["BC"]["Y-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
+    elseif settings[:BC]["Y-"]["type"] == "const_flux"
+        u[:,1,:] .= u[:,2,:] .+ settings[:BC]["Y-"]["value"]["value"] * (delta_y/k)
+    elseif settings[:BC]["Y-"]["type"] == "HTC"
+        h = settings[:BC]["Y-"]["value"]["value"]
+        t_amb = convert_units("temperature", settings[:BC]["Y-"]["value"]["t_amb"], settings[:units]["temperature"], "K")
         u[:,1,:] .= u[:,2,:]*(1 - delta_y * h/k) .+ (h*delta_y/k) * t_amb
     end
     
     # Y+
     side = "Y+"
-    if settings["BC"]["Y+"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings["BC"]["Y+"]["value"]["value"], settings["units"]["temperature"], "K") 
+    if settings[:BC]["Y+"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings[:BC]["Y+"]["value"]["value"], settings[:units]["temperature"], "K") 
         u[:,end,:] .= 2*const_temp .- u[:,end-1,:]
-    elseif settings["BC"]["Y+"]["type"] == "insulated"
+    elseif settings[:BC]["Y+"]["type"] == "insulated"
         u[:,end,:] .= u[:,end-1,:]
-    elseif settings["BC"]["Y+"]["type"] == "const_flux"
-        u[:,end,:] .= u[:,end-1,:] .+ settings["BC"]["Y+"]["value"]["value"] * (delta_y/k)
-    elseif settings["BC"]["Y+"]["type"] == "HTC"
-        h = settings["BC"]["Y+"]["value"]["value"]
-        t_amb = convert_units("temperature", settings["BC"]["Y+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
+    elseif settings[:BC]["Y+"]["type"] == "const_flux"
+        u[:,end,:] .= u[:,end-1,:] .+ settings[:BC]["Y+"]["value"]["value"] * (delta_y/k)
+    elseif settings[:BC]["Y+"]["type"] == "HTC"
+        h = settings[:BC]["Y+"]["value"]["value"]
+        t_amb = convert_units("temperature", settings[:BC]["Y+"]["value"]["t_amb"], settings[:units]["temperature"], "K")
         u[:,end,:] .= u[:,end-1,:]*(1 - delta_y * h/k) .+ (h*delta_y/k) * t_amb
     end
 
     # Z-
     side = "Z-"
-    if settings["BC"]["Z-"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings["BC"]["Z-"]["value"]["value"], settings["units"]["temperature"], "K") 
+    if settings[:BC]["Z-"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings[:BC]["Z-"]["value"]["value"], settings[:units]["temperature"], "K") 
         u[:,:,1] .= 2*const_temp .- u[:,:,2]
-    elseif settings["BC"]["Z-"]["type"] == "insulated"
+    elseif settings[:BC]["Z-"]["type"] == "insulated"
         u[:,:,1] .= u[:,:,2]
-    elseif settings["BC"]["Z-"]["type"] == "const_flux"
-        u[:,:,1] .= u[:,:,2] .+ settings["BC"]["Z-"]["value"]["value"] * (delta_z/k)
-    elseif settings["BC"]["Z-"]["type"] == "HTC"
-        h = settings["BC"]["Z-"]["value"]["value"]
-        t_amb = convert_units("temperature", settings["BC"]["Z-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
+    elseif settings[:BC]["Z-"]["type"] == "const_flux"
+        u[:,:,1] .= u[:,:,2] .+ settings[:BC]["Z-"]["value"]["value"] * (delta_z/k)
+    elseif settings[:BC]["Z-"]["type"] == "HTC"
+        h = settings[:BC]["Z-"]["value"]["value"]
+        t_amb = convert_units("temperature", settings[:BC]["Z-"]["value"]["t_amb"], settings[:units]["temperature"], "K")
         u[:,:,1] .= u[:,:,2]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
     end
 
     # Z+
     side = "Z+"
-    if settings["BC"]["Z+"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings["BC"]["Z+"]["value"]["value"], settings["units"]["temperature"], "K") 
+    if settings[:BC]["Z+"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings[:BC]["Z+"]["value"]["value"], settings[:units]["temperature"], "K") 
         u[:,:,end] .= 2*const_temp .- u[:,:,end-1]
-    elseif settings["BC"]["Z+"]["type"] == "insulated"
+    elseif settings[:BC]["Z+"]["type"] == "insulated"
         u[:,:,end] .= u[:,:,end-1]
-    elseif settings["BC"]["Z+"]["type"] == "const_flux"
-        u[:,:,end] .= u[:,:,end-1] .+ settings["BC"]["Z+"]["value"]["value"] * (delta_z/k)
-    elseif settings["BC"]["Z+"]["type"] == "HTC"
-        h = settings["BC"]["Z+"]["value"]["value"]
-        t_amb = convert_units("temperature", settings["BC"]["Z+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
+    elseif settings[:BC]["Z+"]["type"] == "const_flux"
+        u[:,:,end] .= u[:,:,end-1] .+ settings[:BC]["Z+"]["value"]["value"] * (delta_z/k)
+    elseif settings[:BC]["Z+"]["type"] == "HTC"
+        h = settings[:BC]["Z+"]["value"]["value"]
+        t_amb = convert_units("temperature", settings[:BC]["Z+"]["value"]["t_amb"], settings[:units]["temperature"], "K")
         u[:,:,end] .= u[:,:,end-1]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
     end
 end
@@ -554,8 +551,8 @@ function configure_problem_klu!(u0,p)
 
     f = ODEFunction(conduction_3d_loop!; jac_prototype = float.(jac_sparsity))
 
-    start_time = settings["start_time"]
-    end_time = settings["end_time"]
+    start_time = settings[:start_time]
+    end_time = settings[:end_time]
 
     prob_conduction_3d_sparse = ODEProblem(f, u0, (start_time, end_time), p)
 
@@ -565,8 +562,8 @@ function configure_problem_klu!(u0,p)
 end
 
 function configure_problem_ode!(u0,settings)
-    start_time = settings["start_time"]
-    end_time = settings["end_time"]
+    start_time = settings[:start_time]
+    end_time = settings[:end_time]
 
     # problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
     problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time))
@@ -607,17 +604,19 @@ end
 
 function solve_(working_dir, power_file, settings)
 
-    # k = settings["model"]["bodies"]["die"]["material"]["k"]
-    # rho = settings["model"]["bodies"]["die"]["material"]["rho"]
-    # cp = settings["model"]["bodies"]["die"]["material"]["cp"]
+    # k = settings[:model]["bodies"]["die"]["material"]["k"]
+    # rho = settings[:model]["bodies"]["die"]["material"]["rho"]
+    # cp = settings[:model]["bodies"]["die"]["material"]["cp"]
     
     # (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
-    nodes, u0 = generate_mesh(working_dir)
+    nodes, u0 = generate_mesh(settings)
     Nx,Ny,Nz = size(u0)
     
     # source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
-    p = settings #(source, k, rho, cp, (delta_x, delta_y, delta_z), settings)
+    #p = (settings) #(source, k, rho, cp, (delta_x, delta_y, delta_z), settings)
+
+    p = NamedTuple([pair for pair in settings])
     u0 = initialize_domain!(u0, settings)
 
     # problem, algorithm = configure_problem_klu!(u0,p)
@@ -625,21 +624,21 @@ function solve_(working_dir, power_file, settings)
 
     # problem,_ = configure_problem_ode!(u0,p,settings)
     # problem,_ = configure_problem_ode!(u0,settings)
-    start_time = settings["start_time"]
-    end_time = settings["end_time"]
+    start_time = settings[:start_time]
+    end_time = settings[:end_time]
 
     problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
-    println("Completed problem definition")
     # sol = solve(problem, saveat=1.0,progress=true, progress_steps = 1,
     #             maxiters=1000, abstol=1e-4, reltol=1e-4)
 
-    n_steps = settings["end_time"]
-    dt = settings["dt"]
+    dt = settings[:dt]
+    n_steps = round(Int, settings[:end_time]/dt)
+
     sol = zeros((n_steps, size(u0)...))
     t_ = zeros(n_steps)
 
     integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=1000)
-    for i in range(1,stop=n_steps)
+    for i in range(1,n_steps)
         step!(integrator, dt, true)
         t,u = integrator.t, integrator.u
         sol[i,:,:,:] = u
@@ -674,7 +673,13 @@ function real_main()
     #include("/root/therml/therml/3d/therml_environment/src/unctions_fvm_3d.jl")
 
     f = open(joinpath(working_dir,"settings.json"), "r")
-    settings = JSON.parse(f)
+    s1 = JSON.parse(f)
+
+    settings = Dict{Symbol, Any}()
+    for (k,v) in s1
+        settings[Symbol(k)] = v
+    end
+
     date_start = now()
     println("Start solution at : ", Dates.format(date_start, "HH:MM:SS"))
     sol,t_ = solve_(working_dir, scenario_name, settings);

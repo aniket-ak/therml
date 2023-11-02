@@ -27,16 +27,27 @@ end
 int(x) = floor(Int, x)
 
 function nodes_from_vertices(vertices)
+    # find a large multiplier to convert the float vertices to int
     large_multiplier = scaling_factor(vertices)
+
+    # scale the vertices
     scaled_up_vertices = [round(Int, i*large_multiplier) for i in vertices]
+
+    # compute the differences in the vertices. In some sense these differences are the edges of the model
     differences = compute_differences(scaled_up_vertices)
+
+    # Find the GCD of the these differences. We cannot enforce a dx in our case. Enforcing dx may not capture the edges (differences) correctly
     gcd_ = find_gcd_of_list(differences)
+
+    # Scale the dx back to original dimension
     discretization = gcd_/large_multiplier
+
+    # Include ghost cells on extreme ends and discretize the domain and finally collect nodes
     nodes = range(vertices[1]-discretization, vertices[end]+discretization, step=discretization) |> collect
-    return nodes
+    return nodes, discretization
 end
 
-function generate_mesh(settings)
+function get_vertices_from_bodies(settings)
     bodies_ = settings[:model]["bodies"]
 
     x_start_solder = -bodies_["solder"]["size"]["X"]/2
@@ -97,25 +108,71 @@ function generate_mesh(settings)
     Y = [y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold]
     Z = [z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die]
 
-    X, Y, Z = sort(unique(X)), sort(unique(Y)), sort(unique(Z))
-
-    X_nodes = nodes_from_vertices(X)
-    Y_nodes = nodes_from_vertices(Y)
-    Z_nodes = nodes_from_vertices(Z)
-
-    nodes = (X_nodes, Y_nodes, Z_nodes)
-
-    num_elements_x, num_elements_y, num_elements_z = (size(X_nodes)[1]-1, size(Y_nodes)[1]-1, size(Z_nodes)[1]-1)
-    elements = zeros(num_elements_x, num_elements_y, num_elements_z)
-
-    return nodes, elements
+    return X, Y, Z
 end
 
-function build_domain(Nx,Ny,Nz)
-    u = zeros(Nx, Ny, Nz)
-    println("total mesh count: ", (Nx-2)*(Ny-2)*(Nz-2)/1e3, " k")
-    println("Mesh elements across X, Y and Z ", Nx-2," , ",Ny-2," , ",Nz-2)
-    return u
+function generate_mesh(settings)
+    X,Y,Z = get_vertices_from_bodies(settings)
+    X, Y, Z = sort(unique(X)), sort(unique(Y)), sort(unique(Z))
+
+    X_nodes, dx = nodes_from_vertices(X)
+    Y_nodes, dy = nodes_from_vertices(Y)
+    Z_nodes, dz = nodes_from_vertices(Z)
+
+    num_cells_x, num_cells_y, num_cells_z = (size(X_nodes)[1]-1, size(Y_nodes)[1]-1, size(Z_nodes)[1]-1)
+
+    return (num_cells_x, num_cells_y, num_cells_z), (dx, dy, dz)
+end
+
+function cell_belongs_to_bbox(cell, bbox)
+    x_,y_,z_ = cell
+    ((x_s, x_e), (y_s, y_e), (z_s, z_e)) = bbox
+
+    if x_ < x_e && x_ > x_s && y_ < y_e && y_ > y_s && z_ < z_e && z_ > z_s
+        return true
+    else
+        return false
+    end
+end
+
+function get_k_by_rho_cp(num_cells, discretization, settings)
+    Nx,Ny,Nz = num_cells
+    dx,dy,dz = discretization
+    k_by_rho_cp = zeros(Nx, Ny, Nz)
+    X,Y,Z = get_vertices_from_bodies(settings)
+
+    x_start_solder, x_end_solder, x_start_substrate, x_end_substrate, x_start_bumps, x_end_bumps, x_start_underfill, x_end_underfill, x_start_die, x_end_die, x_start_mold, x_end_mold = X
+    y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold = Y
+    z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die = Z
+
+    min_x_domain = minimum(X)
+    min_y_domain = minimum(Y)
+    min_z_domain = minimum(Z)
+
+    for k in range(1, Nz)
+        for j in range(1, Ny)
+            for i in range(1, Nx)
+                x_ = min_x_domain + i * dx/2
+                y_ = min_y_domain + j * dy/2
+                z_ = min_z_domain + k * dz/2
+                if cell_belongs_to_bbox((x_,y_,z_), ((x_start_solder, x_end_solder), (y_start_solder, y_end_solder), (z_start_solder, z_end_solder)))
+                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["solder"]["material"]["k"] / (settings[:model]["bodies"]["solder"]["material"]["rho"] * settings[:model]["bodies"]["solder"]["material"]["cp"])
+                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_substrate, x_end_substrate), (y_start_substrate, y_end_substrate), (z_start_substrate, z_end_substrate)))
+                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["substrate"]["material"]["k"] / (settings[:model]["bodies"]["substrate"]["material"]["rho"] * settings[:model]["bodies"]["substrate"]["material"]["cp"])
+                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_bumps, x_end_bumps), (y_start_bumps, y_end_bumps), (z_start_bumps, z_end_bumps)))
+                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["bumps"]["material"]["k"] / (settings[:model]["bodies"]["bumps"]["material"]["rho"] * settings[:model]["bodies"]["bumps"]["material"]["cp"])
+                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_mold, x_end_mold), (y_start_mold, y_end_mold), (z_start_mold, z_end_mold)))
+                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["mold"]["material"]["k"] / (settings[:model]["bodies"]["mold"]["material"]["rho"] * settings[:model]["bodies"]["mold"]["material"]["cp"])
+                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_underfill, x_end_underfill), (y_start_underfill, y_end_underfill), (z_start_underfill, z_end_underfill)))
+                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["underfill"]["material"]["k"] / (settings[:model]["bodies"]["underfill"]["material"]["rho"] * settings[:model]["bodies"]["underfill"]["material"]["cp"])
+                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_die, x_end_die), (y_start_die, y_end_die), (z_start_die, z_end_die)))
+                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["die"]["material"]["k"] / (settings[:model]["bodies"]["die"]["material"]["rho"] * settings[:model]["bodies"]["die"]["material"]["cp"])
+                end
+            end
+        end
+    end
+    
+    return k_by_rho_cp
 end
 
 function initialize_domain!(u0, settings)
@@ -125,7 +182,7 @@ function initialize_domain!(u0, settings)
     return u0
 end
 
-function define_volume_sources(working_dir, power_file,settings, Nx, Ny, Nz)
+function define_volume_sources(working_dir, power_file, settings, Nx, Ny, Nz)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
 
@@ -304,22 +361,19 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    settings = p
-    alpha_x = 0.1 #(k/(rho*cp)) / delta_x^2
-    alpha_y = 0.1 #(k/(rho*cp)) / delta_y^2
-    alpha_z = 0.1 #(k/(rho*cp)) / delta_z^2
+    k_by_rho_cp, (dx, dy, dz), settings = p
 
     Nx, Ny, Nz = size(u)
 
-    source = ones(Nx, Ny, Nz) # define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
+    source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
     Threads.@threads for k_ in range(2, Nz-1)
         Threads.@threads for j_ in range(2, Ny-1)
             Threads.@threads for i_ in range(2, Nx-1)
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
-                du[i_, j_, k_] =  alpha_x * (u[im1, j_, k_] + u[ip1, j_, k_] - 2u[i_,j_, k_])+
-                                    alpha_y * (u[i_, jp1, k_] + u[i_, jm1, k_] - 2u[i_, j_, k_]) + 
-                                    alpha_z* (u[i_, j_, kp1] + u[i_, j_, km1] - 2u[i_, j_, k_]) +  
+                du[i_, j_, k_] =  k_by_rho_cp[i_, j_, k_]/(dx^2) * (u[im1, j_, k_] + u[ip1, j_, k_] - 2u[i_,j_, k_])+
+                                    k_by_rho_cp[i_, j_, k_]/(dy^2) * (u[i_, jp1, k_] + u[i_, jm1, k_] - 2u[i_, j_, k_]) + 
+                                    k_by_rho_cp[i_, j_, k_]/(dz^2) * (u[i_, j_, kp1] + u[i_, j_, km1] - 2u[i_, j_, k_]) +  
                                     source[i_, j_, k_]
             end
         end
@@ -391,32 +445,24 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     progress_file = open(progress_file_name, "w")
     close(progress_file)
 
-    # k = settings[:model]["bodies"]["die"]["material"]["k"]
-    # rho = settings[:model]["bodies"]["die"]["material"]["rho"]
-    # cp = settings[:model]["bodies"]["die"]["material"]["cp"]
-    
-    # (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
-    nodes, u0 = generate_mesh(settings)
-    Nx,Ny,Nz = size(u0)
+    (Nx,Ny,Nz), (dx, dy, dz) = generate_mesh(settings)
+    k_by_rho_cp = get_k_by_rho_cp((Nx,Ny,Nz), (dx, dy, dz), settings)
+
+    println("Mesh details - Total cells :"(Nx-2)*(Ny-2)*(Nz-2)/1e6, " k", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
+
+    u0 = zeros(Nx,Ny,Nz)
     
     # source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
-    #p = (settings) #(source, k, rho, cp, (delta_x, delta_y, delta_z), settings)
+    p = (k_by_rho_cp, (dx,dy,dz), settings)
 
-    p = NamedTuple([pair for pair in settings])
+    # p = NamedTuple([pair for pair in settings])
     u0 = initialize_domain!(u0, settings)
 
-    # problem, algorithm = configure_problem_klu!(u0,p)
-    # sol = solve(problem, algorithm, saveat=1.0,progress=true, maxiters=100, abstol=1e-3, reltol=1e-3)
-
-    # problem,_ = configure_problem_ode!(u0,p,settings)
-    # problem,_ = configure_problem_ode!(u0,settings)
     start_time = settings[:start_time]
     end_time = settings[:end_time]
 
     problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
-    # sol = solve(problem, saveat=1.0,progress=true, progress_steps = 1,
-    #             maxiters=1000, abstol=1e-4, reltol=1e-4)
 
     dt = settings[:dt]
     n_steps = round(Int, settings[:end_time]/dt)

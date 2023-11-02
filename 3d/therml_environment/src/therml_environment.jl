@@ -26,9 +26,24 @@ function julia_main()::Cint
 end
 int(x) = floor(Int, x)
 
+function scaling_factor(numbers::Vector{Float64})
+    max_decimal_places = maximum([length(split(string(num), ".")[2]) for num in numbers])
+    return 10^max_decimal_places
+end
+
+function compute_differences(numbers)
+    return [numbers[i+1] - numbers[i] for i in 1:(length(numbers)-1)]
+end
+
+function find_gcd_of_list(numbers::Vector{Int64})
+    return reduce(gcd, numbers)
+end
+
 function nodes_from_vertices(vertices)
     # find a large multiplier to convert the float vertices to int
     large_multiplier = scaling_factor(vertices)
+
+    println("Vertices : ", vertices)
 
     # scale the vertices
     scaled_up_vertices = [round(Int, i*large_multiplier) for i in vertices]
@@ -43,7 +58,7 @@ function nodes_from_vertices(vertices)
     discretization = gcd_/large_multiplier
 
     # Include ghost cells on extreme ends and discretize the domain and finally collect nodes
-    nodes = range(vertices[1]-discretization, vertices[end]+discretization, step=discretization) |> collect
+    nodes = range(vertices[1]-discretization, vertices[end]+discretization, step=discretization)
     return nodes, discretization
 end
 
@@ -108,6 +123,10 @@ function get_vertices_from_bodies(settings)
     Y = [y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold]
     Z = [z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die]
 
+    X = [round(i, digits=6) for i in X]
+    Y = [round(i, digits=6) for i in Y]
+    Z = [round(i, digits=6) for i in Z]
+
     return X, Y, Z
 end
 
@@ -137,9 +156,13 @@ end
 
 function get_k_by_rho_cp(num_cells, discretization, settings)
     Nx,Ny,Nz = num_cells
+    println("number of cells : ", Nx, Ny, Nz)
     dx,dy,dz = discretization
+    println("discretization : ", dx, dy, dz)
     k_by_rho_cp = zeros(Nx, Ny, Nz)
+    println("k_byrho_cp initialized : ", size(k_by_rho_cp))
     X,Y,Z = get_vertices_from_bodies(settings)
+    println("Vertices obtained from settings")
 
     x_start_solder, x_end_solder, x_start_substrate, x_end_substrate, x_start_bumps, x_end_bumps, x_start_underfill, x_end_underfill, x_start_die, x_end_die, x_start_mold, x_end_mold = X
     y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold = Y
@@ -182,7 +205,7 @@ function initialize_domain!(u0, settings)
     return u0
 end
 
-function define_volume_sources(working_dir, power_file, settings, Nx, Ny, Nz)
+function define_volume_sources(power_file, settings, Nx, Ny, Nz)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
 
@@ -201,7 +224,7 @@ function define_volume_sources(working_dir, power_file, settings, Nx, Ny, Nz)
     cell_centers_x = range(step(x_mesh)/2, stop = x_normalized-step(x_mesh)/2, length = Nx)
     cell_centers_y = range(step(y_mesh)/2, stop = x_normalized-step(y_mesh)/2, length = Ny)
 
-    heat_values = read_csv(joinpath(working_dir,power_file))
+    heat_values = read_csv(power_file)
     source_Nx, source_Ny = size(heat_values)
     source_x = range(0, x_normalized, source_Nx)
     source_y = range(0, y_normalized, source_Ny)
@@ -361,11 +384,14 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    k_by_rho_cp, (dx, dy, dz), settings = p
+    k_by_rho_cp, (dx, dy, dz), power_file, settings = p
+
+    println("Min and max of k_by_rho_cp : ", minimum(k_by_rho_cp), " and ", maximum(k_by_rho_cp))
+    println("alpha : ", minimum(k_by_rho_cp/dx^2))
 
     Nx, Ny, Nz = size(u)
 
-    source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
+    source = define_volume_sources(power_file, settings,Nx,Ny,Nz)
 
     Threads.@threads for k_ in range(2, Nz-1)
         Threads.@threads for j_ in range(2, Ny-1)
@@ -446,17 +472,15 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     close(progress_file)
 
     (Nx,Ny,Nz), (dx, dy, dz) = generate_mesh(settings)
+    println("Mesh generation done")
+    println("Mesh details - Total cells :", (Nx-2)*(Ny-2)*(Nz-2)/1e6, " M ", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
+
     k_by_rho_cp = get_k_by_rho_cp((Nx,Ny,Nz), (dx, dy, dz), settings)
 
-    println("Mesh details - Total cells :"(Nx-2)*(Ny-2)*(Nz-2)/1e6, " k", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
-
     u0 = zeros(Nx,Ny,Nz)
-    
-    # source = define_volume_sources(working_dir, power_file,settings,Nx,Ny,Nz)
 
-    p = (k_by_rho_cp, (dx,dy,dz), settings)
+    p = (k_by_rho_cp, (dx,dy,dz), joinpath(working_dir,power_file), settings)
 
-    # p = NamedTuple([pair for pair in settings])
     u0 = initialize_domain!(u0, settings)
 
     start_time = settings[:start_time]
@@ -470,7 +494,7 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     sol = zeros((n_steps, size(u0)...))
     t_ = zeros(n_steps)
 
-    integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=1000)
+    integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=100000)
     for i in range(1,n_steps)
         step!(integrator, dt, true)
         t,u = integrator.t, integrator.u
@@ -522,6 +546,8 @@ function real_main()
     println("Start solution at : ", Dates.format(date_start, "HH:MM:SS"))
     sol,t_ = solve_(working_dir, scenario_name, settings, progress_file_name);
     
+    println(t_)
+
     # do_plotting(sol, sol_wd, settings, scenario_name, false);
     
     save_fields(sol, t_, sol_wd, scenario_name);

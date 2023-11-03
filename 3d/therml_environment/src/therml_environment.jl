@@ -661,10 +661,16 @@ function conduction_3d_loop!(du, u, p, t)
                 dy = Y_nodes[i+1] - Y_nodes[i]
                 dz = Z_nodes[i+1] - Z_nodes[i]
 
-                F_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_])
-                F_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_])
+                Fx_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_]) / dx_i_minus_half
+                Fx_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_]) / dx_i_plus_half
 
-                du[i_, j_, k_] =  F_i_plus_half - F_i_minus_half + source[i_, j_, k_]
+                Fy_i_minus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, j_, k_] - u[i_,jm1,k_]) / dy_i_minus_half
+                Fy_i_plus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, jp1, k_] - u[i_, j_, k_]) / dy_i_plus_half
+
+                Fz_i_minus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, k_] - u[i_,j_,km1]) / dz_i_minus_half
+                Fz_i_plus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, kp1] - u[i_, j_, k_]) / dz_i_plus_half
+
+                du[i_, j_, k_] =  Fx_i_plus_half - Fx_i_minus_half + Fy_i_plus_half - Fy_i_minus_half + Fz_i_plus_half - Fz_i_minus_half + source[i_, j_, k_]
             end
         end
     end

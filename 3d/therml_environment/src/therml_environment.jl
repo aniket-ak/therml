@@ -31,6 +31,11 @@ function scaling_factor(numbers::Vector{Float64})
     return 10^max_decimal_places
 end
 
+function round_off(list_)
+    list_out = [round(i, digits=6) for i in list_]
+    return list_out
+end
+
 function compute_differences(numbers)
     return [numbers[i+1] - numbers[i] for i in 1:(length(numbers)-1)]
 end
@@ -123,24 +128,226 @@ function get_vertices_from_bodies(settings)
     Y = [y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold]
     Z = [z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die]
 
-    X = [round(i, digits=6) for i in X]
-    Y = [round(i, digits=6) for i in Y]
-    Z = [round(i, digits=6) for i in Z]
+    X = round_off(X)
+    Y = round_off(Y)
+    Z = round_off(Z)
 
     return X, Y, Z
 end
 
 function generate_mesh(settings)
     X,Y,Z = get_vertices_from_bodies(settings)
+    
+    x_start_solder, x_end_solder, x_start_substrate, x_end_substrate, x_start_bumps, x_end_bumps, x_start_underfill, x_end_underfill, x_start_die, x_end_die, x_start_mold, x_end_mold = X
+    y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold = Y
+    z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die = Z
+
     X, Y, Z = sort(unique(X)), sort(unique(Y)), sort(unique(Z))
 
-    X_nodes, dx = nodes_from_vertices(X)
-    Y_nodes, dy = nodes_from_vertices(Y)
-    Z_nodes, dz = nodes_from_vertices(Z)
+    ghost_x_min = X[1] - bodies_["die"]["mesh"]["size"]["dx"]
+    ghost_x_max = X[end] + bodies_["die"]["mesh"]["size"]["dx"]
+    ghost_y_min = Y[1] - bodies_["die"]["mesh"]["size"]["dy"]
+    ghost_y_max = Y[end] - bodies_["die"]["mesh"]["size"]["dy"]
+    ghost_z_min = Z[1] - bodies_["die"]["mesh"]["size"]["dz"]
+    ghost_z_max =  Z[end] - bodies_["die"]["mesh"]["size"]["dz"]
 
-    num_cells_x, num_cells_y, num_cells_z = (size(X_nodes)[1]-1, size(Y_nodes)[1]-1, size(Z_nodes)[1]-1)
+    X_mesh = [ghost_x_min, X[1],X[end], ghost_x_max]
+    Y_mesh = [ghost_y_min, Y[1],Y[end], ghost_y_max]
+    Z_mesh = [ghost_z_min, Z[1],Z[end], ghost_z_max]
 
-    return (num_cells_x, num_cells_y, num_cells_z), (dx, dy, dz)
+    for (i, mesh_point) in enumerate(X)
+        if i > 1
+            mid_point = (mesh_point+X[i-1])/2
+
+            largest_precedence, sizing = 0, 0
+            if mid_point > x_start_solder && mid_point < x_end_solder
+                if largest_precedence < bodies_["solder"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["solder"]["mesh"]["precedence"]
+                    sizing = bodies_["solder"]["mesh"]["size"]["dx"]
+                    # println("Solder  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > x_start_substrate && mid_point < x_end_substrate
+                if largest_precedence < bodies_["substrate"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["substrate"]["mesh"]["precedence"]
+                    sizing = bodies_["substrate"]["mesh"]["size"]["dx"]
+                    # println("substrate  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > x_start_bumps && mid_point < x_end_bumps
+                if largest_precedence < bodies_["bumps"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["bumps"]["mesh"]["precedence"]
+                    sizing = bodies_["bumps"]["mesh"]["size"]["dx"]
+                    # println("bumps  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > x_start_underfill && mid_point < x_end_underfill
+                if largest_precedence < bodies_["underfill"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["underfill"]["mesh"]["precedence"]
+                    sizing = bodies_["underfill"]["mesh"]["size"]["dx"]
+                    # println("underfill  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > x_start_die && mid_point < x_end_die
+                if largest_precedence < bodies_["die"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["die"]["mesh"]["precedence"]
+                    sizing = bodies_["die"]["mesh"]["size"]["dx"]
+                    # println("die  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > x_start_mold && mid_point < x_end_mold
+                if largest_precedence < bodies_["mold"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["mold"]["mesh"]["precedence"]
+                    sizing = bodies_["mold"]["mesh"]["size"]["dx"]
+                    # println("mold  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            min_num_nodes = max(2, round(Int, abs(mesh_point-X[i-1])/sizing))
+            # println(X[i-1],"\t", mesh_point,"\t", min_num_nodes, "\t", sizing)
+            mesh_ = range(X[i-1], mesh_point, min_num_nodes)|>collect
+            # println(X[i-1], "\t", mesh_point, "\t", sizing, "\t", min_num_nodes, "\t", mesh_[end])
+            append!(X_mesh, mesh_)
+        end
+
+    end
+
+    # println("Mesh for X done")
+
+    for (i, mesh_point) in enumerate(Y)
+        if i > 1
+            mid_point = (mesh_point+Y[i-1])/2
+
+            largest_precedence, sizing = 0, 0
+            if mid_point > y_start_solder && mid_point < y_end_solder
+                if largest_precedence < bodies_["solder"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["solder"]["mesh"]["precedence"]
+                    sizing = bodies_["solder"]["mesh"]["size"]["dy"]
+                    # println("Solder  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > y_start_substrate && mid_point < y_end_substrate
+                if largest_precedence < bodies_["substrate"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["substrate"]["mesh"]["precedence"]
+                    sizing = bodies_["substrate"]["mesh"]["size"]["dy"]
+                    # println("substrate  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > y_start_bumps && mid_point < y_end_bumps
+                if largest_precedence < bodies_["bumps"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["bumps"]["mesh"]["precedence"]
+                    sizing = bodies_["bumps"]["mesh"]["size"]["dy"]
+                    # println("bumps  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > y_start_underfill && mid_point < y_end_underfill
+                if largest_precedence < bodies_["underfill"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["underfill"]["mesh"]["precedence"]
+                    sizing = bodies_["underfill"]["mesh"]["size"]["dy"]
+                    # println("underfill  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > y_start_die && mid_point < y_end_die
+                if largest_precedence < bodies_["die"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["die"]["mesh"]["precedence"]
+                    sizing = bodies_["die"]["mesh"]["size"]["dy"]
+                    # println("die  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > y_start_mold && mid_point < y_end_mold
+                if largest_precedence < bodies_["mold"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["mold"]["mesh"]["precedence"]
+                    sizing = bodies_["mold"]["mesh"]["size"]["dy"]
+                    # println("mold  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            min_num_nodes = max(2, round(Int, abs(mesh_point-Y[i-1])/sizing))
+            mesh_ = range(Y[i-1], mesh_point, min_num_nodes)|>collect
+            # println(X[i-1], "\t", mesh_point, "\t", sizing, "\t", min_num_nodes, "\t", mesh_[end])
+            append!(Y_mesh, mesh_)
+        end
+
+    end
+
+    # println("Mesh for Y done")
+
+    for (i, mesh_point) in enumerate(Z)
+        if i > 1
+            mid_point = (mesh_point+Z[i-1])/2
+
+            largest_precedence, sizing = 0, 0
+            if mid_point > z_start_solder && mid_point < z_end_solder
+                if largest_precedence < bodies_["solder"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["solder"]["mesh"]["precedence"]
+                    sizing = bodies_["solder"]["mesh"]["size"]["dz"]
+                    # println("Solder  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > z_start_substrate && mid_point < z_end_substrate
+                if largest_precedence < bodies_["substrate"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["substrate"]["mesh"]["precedence"]
+                    sizing = bodies_["substrate"]["mesh"]["size"]["dz"]
+                    # println("substrate  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > z_start_bumps && mid_point < z_end_bumps
+                if largest_precedence < bodies_["bumps"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["bumps"]["mesh"]["precedence"]
+                    sizing = bodies_["bumps"]["mesh"]["size"]["dz"]
+                    # println("bumps  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > z_start_underfill && mid_point < z_end_underfill
+                if largest_precedence < bodies_["underfill"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["underfill"]["mesh"]["precedence"]
+                    sizing = bodies_["underfill"]["mesh"]["size"]["dz"]
+                    # println("underfill  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > z_start_die && mid_point < z_end_die
+                if largest_precedence < bodies_["die"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["die"]["mesh"]["precedence"]
+                    sizing = bodies_["die"]["mesh"]["size"]["dz"]
+                    # println("die  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            if mid_point > z_start_mold && mid_point < z_end_mold
+                if largest_precedence < bodies_["mold"]["mesh"]["precedence"]
+                    largest_precedence = bodies_["mold"]["mesh"]["precedence"]
+                    sizing = bodies_["mold"]["mesh"]["size"]["dz"]
+                    # println("mold  - ",i, "\t", mid_point, "\t", largest_precedence, "\t", sizing)
+                end
+            end
+
+            min_num_nodes = max(2, round(Int, abs(mesh_point-Z[i-1])/sizing))
+            # println(Z[i-1], "\t", mesh_point, "\t", sizing, "\t", min_num_nodes)
+            mesh_ = range(Z[i-1], mesh_point, min_num_nodes)|>collect
+            append!(Z_mesh, mesh_)
+        end
+
+    end
+
+    X_mesh, Y_mesh, Z_mesh = sort(unique(X_mesh)), sort(unique(Y_mesh)), sort(unique(Z_mesh))
+
+    num_cells_x, num_cells_y, num_cells_z = size(X_mesh)[1]-1, size(Y_mesh)[1]-1, size(Z_mesh)[1]-1
+
+    return (X_mesh, Y_mesh, Z_mesh), (num_cells_x, num_cells_y, num_cells_z)
 end
 
 function cell_belongs_to_bbox(cell, bbox)
@@ -154,43 +361,75 @@ function cell_belongs_to_bbox(cell, bbox)
     end
 end
 
-function get_k_by_rho_cp(num_cells, discretization, settings)
-    Nx,Ny,Nz = num_cells
-    println("number of cells : ", Nx, Ny, Nz)
-    dx,dy,dz = discretization
-    println("discretization : ", dx, dy, dz)
+function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
+    nodes_x, nodes_y, nodes_z = nodes
     k_by_rho_cp = zeros(Nx, Ny, Nz)
-    println("k_byrho_cp initialized : ", size(k_by_rho_cp))
+    
     X,Y,Z = get_vertices_from_bodies(settings)
-    println("Vertices obtained from settings")
 
     x_start_solder, x_end_solder, x_start_substrate, x_end_substrate, x_start_bumps, x_end_bumps, x_start_underfill, x_end_underfill, x_start_die, x_end_die, x_start_mold, x_end_mold = X
     y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold = Y
     z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die = Z
 
-    min_x_domain = minimum(X)
-    min_y_domain = minimum(Y)
-    min_z_domain = minimum(Z)
+    solder_precedence = settings[:model]["bodies"]["solder"]["mesh"]["precedence"]
+    substrate_precedence = settings[:model]["bodies"]["substrate"]["mesh"]["precedence"]
+    bumps_precedence = settings[:model]["bodies"]["bumps"]["mesh"]["precedence"]
+    mold_precedence = settings[:model]["bodies"]["mold"]["mesh"]["precedence"]
+    underfill_precedence = settings[:model]["bodies"]["underfill"]["mesh"]["precedence"]
+    die_precedence = settings[:model]["bodies"]["die"]["mesh"]["precedence"]
 
     for k in range(1, Nz)
         for j in range(1, Ny)
             for i in range(1, Nx)
-                x_ = min_x_domain + i * dx/2
-                y_ = min_y_domain + j * dy/2
-                z_ = min_z_domain + k * dz/2
+                x_ = nodes_x[i] + (nodes_x[i+1] - nodes_x[i])/2
+                y_ = nodes_y[j] + (nodes_y[j+1] - nodes_y[j])/2
+                z_ = nodes_z[k] + (nodes_z[k+1] - nodes_z[k])/2
+
+                precedence = -1
+
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_solder, x_end_solder), (y_start_solder, y_end_solder), (z_start_solder, z_end_solder)))
-                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["solder"]["material"]["k"] / (settings[:model]["bodies"]["solder"]["material"]["rho"] * settings[:model]["bodies"]["solder"]["material"]["cp"])
-                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_substrate, x_end_substrate), (y_start_substrate, y_end_substrate), (z_start_substrate, z_end_substrate)))
-                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["substrate"]["material"]["k"] / (settings[:model]["bodies"]["substrate"]["material"]["rho"] * settings[:model]["bodies"]["substrate"]["material"]["cp"])
-                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_bumps, x_end_bumps), (y_start_bumps, y_end_bumps), (z_start_bumps, z_end_bumps)))
-                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["bumps"]["material"]["k"] / (settings[:model]["bodies"]["bumps"]["material"]["rho"] * settings[:model]["bodies"]["bumps"]["material"]["cp"])
-                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_mold, x_end_mold), (y_start_mold, y_end_mold), (z_start_mold, z_end_mold)))
-                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["mold"]["material"]["k"] / (settings[:model]["bodies"]["mold"]["material"]["rho"] * settings[:model]["bodies"]["mold"]["material"]["cp"])
-                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_underfill, x_end_underfill), (y_start_underfill, y_end_underfill), (z_start_underfill, z_end_underfill)))
-                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["underfill"]["material"]["k"] / (settings[:model]["bodies"]["underfill"]["material"]["rho"] * settings[:model]["bodies"]["underfill"]["material"]["cp"])
-                elseif cell_belongs_to_bbox((x_,y_,z_), ((x_start_die, x_end_die), (y_start_die, y_end_die), (z_start_die, z_end_die)))
-                    k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["die"]["material"]["k"] / (settings[:model]["bodies"]["die"]["material"]["rho"] * settings[:model]["bodies"]["die"]["material"]["cp"])
+                    if precedence < solder_precedence
+                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["solder"]["material"]["k"] / (settings[:model]["bodies"]["solder"]["material"]["rho"] * settings[:model]["bodies"]["solder"]["material"]["cp"])
+                        precedence = solder_precedence
+                    end
+                    # println("Point falls in solder ", x_*1e3, ",", y_*1e3, ",", z_*1e3, " Solder bounds x", x_start_solder*1e3, ",", x_end_solder*1e3)
                 end
+
+                if cell_belongs_to_bbox((x_,y_,z_), ((x_start_substrate, x_end_substrate), (y_start_substrate, y_end_substrate), (z_start_substrate, z_end_substrate)))
+                    if precedence < substrate_precedence
+                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["substrate"]["material"]["k"] / (settings[:model]["bodies"]["substrate"]["material"]["rho"] * settings[:model]["bodies"]["substrate"]["material"]["cp"])
+                        precedence = substrate_precedence
+                    end
+                end
+
+                if cell_belongs_to_bbox((x_,y_,z_), ((x_start_bumps, x_end_bumps), (y_start_bumps, y_end_bumps), (z_start_bumps, z_end_bumps)))
+                    if precedence < bumps_precedence
+                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["bumps"]["material"]["k"] / (settings[:model]["bodies"]["bumps"]["material"]["rho"] * settings[:model]["bodies"]["bumps"]["material"]["cp"])
+                        precedence = bumps_precedence
+                    end
+                end
+
+                if cell_belongs_to_bbox((x_,y_,z_), ((x_start_mold, x_end_mold), (y_start_mold, y_end_mold), (z_start_mold, z_end_mold)))
+                    if precedence < mold_precedence
+                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["mold"]["material"]["k"] / (settings[:model]["bodies"]["mold"]["material"]["rho"] * settings[:model]["bodies"]["mold"]["material"]["cp"])
+                        precedence = mold_precedence
+                    end
+                end
+
+                if cell_belongs_to_bbox((x_,y_,z_), ((x_start_underfill, x_end_underfill), (y_start_underfill, y_end_underfill), (z_start_underfill, z_end_underfill)))
+                    if precedence < underfill_precedence
+                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["underfill"]["material"]["k"] / (settings[:model]["bodies"]["underfill"]["material"]["rho"] * settings[:model]["bodies"]["underfill"]["material"]["cp"])
+                        precedence = underfill_precedence
+                    end
+                end
+
+                if cell_belongs_to_bbox((x_,y_,z_), ((x_start_die, x_end_die), (y_start_die, y_end_die), (z_start_die, z_end_die)))
+                    if precedence < die_precedence
+                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["die"]["material"]["k"] / (settings[:model]["bodies"]["die"]["material"]["rho"] * settings[:model]["bodies"]["die"]["material"]["cp"])
+                        precedence = die_precedence
+                    end
+                end
+
             end
         end
     end
@@ -384,23 +623,48 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    k_by_rho_cp, (dx, dy, dz), power_file, settings = p
+    k_by_rho_cp, (X_nodes, Y_Nodes, Z_nodes), power_file, settings = p
 
     println("Min and max of k_by_rho_cp : ", minimum(k_by_rho_cp), " and ", maximum(k_by_rho_cp))
     println("alpha : ", minimum(k_by_rho_cp/dx^2))
 
     Nx, Ny, Nz = size(u)
 
-    source = define_volume_sources(power_file, settings,Nx,Ny,Nz)
+    source = define_volume_sources(power_file, settings, Nx,Ny,Nz)
+
+    # Threads.@threads for k_ in range(2, Nz-1)
+    #     Threads.@threads for j_ in range(2, Ny-1)
+    #         Threads.@threads for i_ in range(2, Nx-1)
+    #             ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
+    #             du[i_, j_, k_] =  k_by_rho_cp[i_, j_, k_]/(dx^2) * (u[im1, j_, k_] + u[ip1, j_, k_] - 2u[i_,j_, k_])+
+    #                                 k_by_rho_cp[i_, j_, k_]/(dy^2) * (u[i_, jp1, k_] + u[i_, jm1, k_] - 2u[i_, j_, k_]) + 
+    #                                 k_by_rho_cp[i_, j_, k_]/(dz^2) * (u[i_, j_, kp1] + u[i_, j_, km1] - 2u[i_, j_, k_]) +  
+    #                                 source[i_, j_, k_]
+    #         end
+    #     end
+    # end
 
     Threads.@threads for k_ in range(2, Nz-1)
         Threads.@threads for j_ in range(2, Ny-1)
             Threads.@threads for i_ in range(2, Nx-1)
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
-                du[i_, j_, k_] =  k_by_rho_cp[i_, j_, k_]/(dx^2) * (u[im1, j_, k_] + u[ip1, j_, k_] - 2u[i_,j_, k_])+
-                                    k_by_rho_cp[i_, j_, k_]/(dy^2) * (u[i_, jp1, k_] + u[i_, jm1, k_] - 2u[i_, j_, k_]) + 
-                                    k_by_rho_cp[i_, j_, k_]/(dz^2) * (u[i_, j_, kp1] + u[i_, j_, km1] - 2u[i_, j_, k_]) +  
-                                    source[i_, j_, k_]
+                
+                dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
+                dy_i_minus_half = (Y_nodes[j_+1] - Y_nodes[j_-1])/2
+                dz_i_minus_half = (Z_nodes[k_+1] - Z_nodes[k_-1])/2
+
+                dx_i_plus_half = (X_nodes[i_+2] - X_nodes[i_])/2
+                dy_i_plus_half = (Y_nodes[j_+2] - Y_nodes[j_])/2
+                dz_i_plus_half = (Z_nodes[k_+2] - Z_nodes[k_])/2
+
+                dx = X_nodes[i+1] - X_nodes[i]
+                dy = Y_nodes[i+1] - Y_nodes[i]
+                dz = Z_nodes[i+1] - Z_nodes[i]
+
+                F_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_])
+                F_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_])
+
+                du[i_, j_, k_] =  F_i_plus_half - F_i_minus_half + source[i_, j_, k_]
             end
         end
     end
@@ -471,15 +735,15 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     progress_file = open(progress_file_name, "w")
     close(progress_file)
 
-    (Nx,Ny,Nz), (dx, dy, dz) = generate_mesh(settings)
+    (X_nodes, Y_Nodes, Z_nodes) , (Nx,Ny,Nz) = generate_mesh(settings)
     println("Mesh generation done")
     println("Mesh details - Total cells :", (Nx-2)*(Ny-2)*(Nz-2)/1e6, " M ", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
 
-    k_by_rho_cp = get_k_by_rho_cp((Nx,Ny,Nz), (dx, dy, dz), settings)
+    k_by_rho_cp = get_k_by_rho_cp((X_nodes, Y_Nodes, Z_nodes), (Nx, Ny, Nz), settings)
 
     u0 = zeros(Nx,Ny,Nz)
 
-    p = (k_by_rho_cp, (dx,dy,dz), joinpath(working_dir,power_file), settings)
+    p = (k_by_rho_cp, (X_nodes, Y_Nodes, Z_nodes), joinpath(working_dir,power_file), settings)
 
     u0 = initialize_domain!(u0, settings)
 

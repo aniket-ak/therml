@@ -48,7 +48,7 @@ function nodes_from_vertices(vertices)
     # find a large multiplier to convert the float vertices to int
     large_multiplier = scaling_factor(vertices)
 
-    println("Vertices : ", vertices)
+    # println("Vertices : ", vertices)
 
     # scale the vertices
     scaled_up_vertices = [round(Int, i*large_multiplier) for i in vertices]
@@ -68,7 +68,7 @@ function nodes_from_vertices(vertices)
 end
 
 function get_vertices_from_bodies(settings)
-    bodies_ = settings[:model]["bodies"]
+    bodies_ = settings["model"]["bodies"]
 
     x_start_solder = -bodies_["solder"]["size"]["X"]/2
     x_end_solder = bodies_["solder"]["size"]["X"]/2
@@ -137,6 +137,7 @@ end
 
 function generate_mesh(settings)
     X,Y,Z = get_vertices_from_bodies(settings)
+    bodies_ = settings["model"]["bodies"]
     
     x_start_solder, x_end_solder, x_start_substrate, x_end_substrate, x_start_bumps, x_end_bumps, x_start_underfill, x_end_underfill, x_start_die, x_end_die, x_start_mold, x_end_mold = X
     y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold = Y
@@ -371,16 +372,16 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
     y_start_solder, y_end_solder, y_start_substrate, y_end_substrate, y_start_bumps, y_end_bumps, y_start_underfill, y_end_underfill, y_start_die, y_end_die, y_start_mold, y_end_mold = Y
     z_start_solder, z_end_solder, z_start_substrate, z_end_substrate, z_start_mold, z_end_mold, z_start_bumps, z_end_bumps, z_start_underfill, z_end_underfill, z_start_die, z_end_die = Z
 
-    solder_precedence = settings[:model]["bodies"]["solder"]["mesh"]["precedence"]
-    substrate_precedence = settings[:model]["bodies"]["substrate"]["mesh"]["precedence"]
-    bumps_precedence = settings[:model]["bodies"]["bumps"]["mesh"]["precedence"]
-    mold_precedence = settings[:model]["bodies"]["mold"]["mesh"]["precedence"]
-    underfill_precedence = settings[:model]["bodies"]["underfill"]["mesh"]["precedence"]
-    die_precedence = settings[:model]["bodies"]["die"]["mesh"]["precedence"]
+    solder_precedence = settings["model"]["bodies"]["solder"]["mesh"]["precedence"]
+    substrate_precedence = settings["model"]["bodies"]["substrate"]["mesh"]["precedence"]
+    bumps_precedence = settings["model"]["bodies"]["bumps"]["mesh"]["precedence"]
+    mold_precedence = settings["model"]["bodies"]["mold"]["mesh"]["precedence"]
+    underfill_precedence = settings["model"]["bodies"]["underfill"]["mesh"]["precedence"]
+    die_precedence = settings["model"]["bodies"]["die"]["mesh"]["precedence"]
 
-    for k in range(1, Nz)
-        for j in range(1, Ny)
-            for i in range(1, Nx)
+    for k in range(2, Nz-1)
+        for j in range(2, Ny-1)
+            for i in range(2, Nx-1)
                 x_ = nodes_x[i] + (nodes_x[i+1] - nodes_x[i])/2
                 y_ = nodes_y[j] + (nodes_y[j+1] - nodes_y[j])/2
                 z_ = nodes_z[k] + (nodes_z[k+1] - nodes_z[k])/2
@@ -389,7 +390,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
 
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_solder, x_end_solder), (y_start_solder, y_end_solder), (z_start_solder, z_end_solder)))
                     if precedence < solder_precedence
-                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["solder"]["material"]["k"] / (settings[:model]["bodies"]["solder"]["material"]["rho"] * settings[:model]["bodies"]["solder"]["material"]["cp"])
+                        k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["solder"]["material"]["k"] / (settings["model"]["bodies"]["solder"]["material"]["rho"] * settings["model"]["bodies"]["solder"]["material"]["cp"])
                         precedence = solder_precedence
                     end
                     # println("Point falls in solder ", x_*1e3, ",", y_*1e3, ",", z_*1e3, " Solder bounds x", x_start_solder*1e3, ",", x_end_solder*1e3)
@@ -397,35 +398,35 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
 
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_substrate, x_end_substrate), (y_start_substrate, y_end_substrate), (z_start_substrate, z_end_substrate)))
                     if precedence < substrate_precedence
-                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["substrate"]["material"]["k"] / (settings[:model]["bodies"]["substrate"]["material"]["rho"] * settings[:model]["bodies"]["substrate"]["material"]["cp"])
+                        k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["substrate"]["material"]["k"] / (settings["model"]["bodies"]["substrate"]["material"]["rho"] * settings["model"]["bodies"]["substrate"]["material"]["cp"])
                         precedence = substrate_precedence
                     end
                 end
 
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_bumps, x_end_bumps), (y_start_bumps, y_end_bumps), (z_start_bumps, z_end_bumps)))
                     if precedence < bumps_precedence
-                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["bumps"]["material"]["k"] / (settings[:model]["bodies"]["bumps"]["material"]["rho"] * settings[:model]["bodies"]["bumps"]["material"]["cp"])
+                        k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["bumps"]["material"]["k"] / (settings["model"]["bodies"]["bumps"]["material"]["rho"] * settings["model"]["bodies"]["bumps"]["material"]["cp"])
                         precedence = bumps_precedence
                     end
                 end
 
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_mold, x_end_mold), (y_start_mold, y_end_mold), (z_start_mold, z_end_mold)))
                     if precedence < mold_precedence
-                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["mold"]["material"]["k"] / (settings[:model]["bodies"]["mold"]["material"]["rho"] * settings[:model]["bodies"]["mold"]["material"]["cp"])
+                        k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["mold"]["material"]["k"] / (settings["model"]["bodies"]["mold"]["material"]["rho"] * settings["model"]["bodies"]["mold"]["material"]["cp"])
                         precedence = mold_precedence
                     end
                 end
 
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_underfill, x_end_underfill), (y_start_underfill, y_end_underfill), (z_start_underfill, z_end_underfill)))
                     if precedence < underfill_precedence
-                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["underfill"]["material"]["k"] / (settings[:model]["bodies"]["underfill"]["material"]["rho"] * settings[:model]["bodies"]["underfill"]["material"]["cp"])
+                        k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["underfill"]["material"]["k"] / (settings["model"]["bodies"]["underfill"]["material"]["rho"] * settings["model"]["bodies"]["underfill"]["material"]["cp"])
                         precedence = underfill_precedence
                     end
                 end
 
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_die, x_end_die), (y_start_die, y_end_die), (z_start_die, z_end_die)))
                     if precedence < die_precedence
-                        k_by_rho_cp[i,j,k] = settings[:model]["bodies"]["die"]["material"]["k"] / (settings[:model]["bodies"]["die"]["material"]["rho"] * settings[:model]["bodies"]["die"]["material"]["cp"])
+                        k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["die"]["material"]["k"] / (settings["model"]["bodies"]["die"]["material"]["rho"] * settings["model"]["bodies"]["die"]["material"]["cp"])
                         precedence = die_precedence
                     end
                 end
@@ -438,8 +439,8 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
 end
 
 function initialize_domain!(u0, settings)
-    temperature_base_units = settings[:units]["temperature"]
-    T_initial = convert_units("temperature", settings[:IC], temperature_base_units, "K")
+    temperature_base_units = settings["units"]["temperature"]
+    T_initial = convert_units("temperature", settings["IC"], temperature_base_units, "K")
     u0 = u0 .+ T_initial
     return u0
 end
@@ -448,9 +449,9 @@ function define_volume_sources(power_file, settings, Nx, Ny, Nz)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
 
-    x_length = settings[:model]["bodies"]["die"]["size"]["X"]
-    y_length = settings[:model]["bodies"]["die"]["size"]["Y"]
-    z_length = settings[:model]["bodies"]["die"]["size"]["Z"]
+    x_length = settings["model"]["bodies"]["die"]["size"]["X"]
+    y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
+    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
 
     x_normalized = x_length/z_length
     y_normalized = y_length/z_length
@@ -477,7 +478,7 @@ function do_plotting(sol, sol_wd, settings, scenario_name, interpolation)
     result_ = convert_units("temperature", sol[end, 2:end-1,2:end-1,1], "K", "C")'
     # result_ = sol[end][2:end-1,2:end-1,2]
     (delta_x, delta_y, delta_z), (Nx,Ny,Nz), (x_mesh, y_mesh, z_mesh) = create_mesh(settings)
-    z_length = settings[:model]["bodies"]["die"]["size"]["Z"]
+    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
     
     if interpolation == true
         p = plot(
@@ -527,106 +528,104 @@ function convert_units(quantity, value, from_units, to_units)
 end
 
 function apply_bc(u, settings, delta_x, delta_y, delta_z)
-    k = settings[:model]["bodies"]["die"]["material"]["k"]
-    rho = settings[:model]["bodies"]["die"]["material"]["rho"]
-    cp = settings[:model]["bodies"]["die"]["material"]["cp"]
+    k = settings["model"]["bodies"]["die"]["material"]["k"]
 
     # At X-
     side = "X-"
-    if settings[:BC]["X-"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings[:BC]["X-"]["value"]["value"], settings[:units]["temperature"], "K") 
+    if settings["BC"]["X-"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings["BC"]["X-"]["value"]["value"], settings["units"]["temperature"], "K") 
         u[1,:,:] .= 2*const_temp .- u[2,:,:]
-    elseif settings[:BC]["X-"]["type"] == "insulated"
+    elseif settings["BC"]["X-"]["type"] == "insulated"
         u[1,:,:] .= u[2,:,:]
-    elseif settings[:BC]["X-"]["type"] == "const_flux"
-        u[1,:,:] .= u[2,:,:] .+ settings[:BC]["X-"]["value"]["value"] * (delta_x/k)
-    elseif settings[:BC]["X-"]["type"] == "HTC"
-        h = settings[:BC]["X-"]["value"]["value"]
-        t_amb = convert_units("temperature", settings[:BC]["X-"]["value"]["t_amb"], settings[:units]["temperature"], "K")
+    elseif settings["BC"]["X-"]["type"] == "const_flux"
+        u[1,:,:] .= u[2,:,:] .+ settings["BC"]["X-"]["value"]["value"] * (delta_x/k)
+    elseif settings["BC"]["X-"]["type"] == "HTC"
+        h = settings["BC"]["X-"]["value"]["value"]
+        t_amb = convert_units("temperature", settings["BC"]["X-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[1,:,:] .= u[2,:,:]*(1 - delta_x * h/k) .+ (h*delta_x/k) * t_amb
     end
 
     # At X+
     side = "X+"
-    if settings[:BC]["X+"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings[:BC]["X+"]["value"]["value"], settings[:units]["temperature"], "K") 
-        u[end,:,:] .= 2*settings[:BC]["X+"]["value"] .- u[end-1,:,:]
-    elseif settings[:BC]["X+"]["type"] == "insulated"
+    if settings["BC"]["X+"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings["BC"]["X+"]["value"]["value"], settings["units"]["temperature"], "K") 
+        u[end,:,:] .= 2*settings["BC"]["X+"]["value"] .- u[end-1,:,:]
+    elseif settings["BC"]["X+"]["type"] == "insulated"
         u[end,:,:] .= u[end-1,:,:]
-    elseif settings[:BC]["X+"]["type"] == "const_flux"
-        u[end,:,:] .= u[end-1,:,:] .+ settings[:BC]["X+"]["value"]["value"] * (delta_x/k)
-    elseif settings[:BC]["X+"]["type"] == "HTC"
-        h = settings[:BC]["X+"]["value"]["value"]
-        t_amb = convert_units("temperature", settings[:BC]["X+"]["value"]["t_amb"], settings[:units]["temperature"], "K")
+    elseif settings["BC"]["X+"]["type"] == "const_flux"
+        u[end,:,:] .= u[end-1,:,:] .+ settings["BC"]["X+"]["value"]["value"] * (delta_x/k)
+    elseif settings["BC"]["X+"]["type"] == "HTC"
+        h = settings["BC"]["X+"]["value"]["value"]
+        t_amb = convert_units("temperature", settings["BC"]["X+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[end,:,:] .= u[end-1,:,:]*(1 - delta_x * h/k) .+ (h*delta_x/k) * t_amb
     end
 
     # Y-
     side = "Y-"
-    if settings[:BC]["Y-"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings[:BC]["Y-"]["value"]["value"], settings[:units]["temperature"], "K") 
+    if settings["BC"]["Y-"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings["BC"]["Y-"]["value"]["value"], settings["units"]["temperature"], "K") 
         u[:,1,:] .= 2*const_temp .- u[:,2,:]
-    elseif settings[:BC]["Y-"]["type"] == "insulated"
+    elseif settings["BC"]["Y-"]["type"] == "insulated"
         u[:,1,:] .= u[:,2,:]
-    elseif settings[:BC]["Y-"]["type"] == "const_flux"
-        u[:,1,:] .= u[:,2,:] .+ settings[:BC]["Y-"]["value"]["value"] * (delta_y/k)
-    elseif settings[:BC]["Y-"]["type"] == "HTC"
-        h = settings[:BC]["Y-"]["value"]["value"]
-        t_amb = convert_units("temperature", settings[:BC]["Y-"]["value"]["t_amb"], settings[:units]["temperature"], "K")
+    elseif settings["BC"]["Y-"]["type"] == "const_flux"
+        u[:,1,:] .= u[:,2,:] .+ settings["BC"]["Y-"]["value"]["value"] * (delta_y/k)
+    elseif settings["BC"]["Y-"]["type"] == "HTC"
+        h = settings["BC"]["Y-"]["value"]["value"]
+        t_amb = convert_units("temperature", settings["BC"]["Y-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[:,1,:] .= u[:,2,:]*(1 - delta_y * h/k) .+ (h*delta_y/k) * t_amb
     end
     
     # Y+
     side = "Y+"
-    if settings[:BC]["Y+"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings[:BC]["Y+"]["value"]["value"], settings[:units]["temperature"], "K") 
+    if settings["BC"]["Y+"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings["BC"]["Y+"]["value"]["value"], settings["units"]["temperature"], "K") 
         u[:,end,:] .= 2*const_temp .- u[:,end-1,:]
-    elseif settings[:BC]["Y+"]["type"] == "insulated"
+    elseif settings["BC"]["Y+"]["type"] == "insulated"
         u[:,end,:] .= u[:,end-1,:]
-    elseif settings[:BC]["Y+"]["type"] == "const_flux"
-        u[:,end,:] .= u[:,end-1,:] .+ settings[:BC]["Y+"]["value"]["value"] * (delta_y/k)
-    elseif settings[:BC]["Y+"]["type"] == "HTC"
-        h = settings[:BC]["Y+"]["value"]["value"]
-        t_amb = convert_units("temperature", settings[:BC]["Y+"]["value"]["t_amb"], settings[:units]["temperature"], "K")
+    elseif settings["BC"]["Y+"]["type"] == "const_flux"
+        u[:,end,:] .= u[:,end-1,:] .+ settings["BC"]["Y+"]["value"]["value"] * (delta_y/k)
+    elseif settings["BC"]["Y+"]["type"] == "HTC"
+        h = settings["BC"]["Y+"]["value"]["value"]
+        t_amb = convert_units("temperature", settings["BC"]["Y+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[:,end,:] .= u[:,end-1,:]*(1 - delta_y * h/k) .+ (h*delta_y/k) * t_amb
     end
 
     # Z-
     side = "Z-"
-    if settings[:BC]["Z-"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings[:BC]["Z-"]["value"]["value"], settings[:units]["temperature"], "K") 
+    if settings["BC"]["Z-"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings["BC"]["Z-"]["value"]["value"], settings["units"]["temperature"], "K") 
         u[:,:,1] .= 2*const_temp .- u[:,:,2]
-    elseif settings[:BC]["Z-"]["type"] == "insulated"
+    elseif settings["BC"]["Z-"]["type"] == "insulated"
         u[:,:,1] .= u[:,:,2]
-    elseif settings[:BC]["Z-"]["type"] == "const_flux"
-        u[:,:,1] .= u[:,:,2] .+ settings[:BC]["Z-"]["value"]["value"] * (delta_z/k)
-    elseif settings[:BC]["Z-"]["type"] == "HTC"
-        h = settings[:BC]["Z-"]["value"]["value"]
-        t_amb = convert_units("temperature", settings[:BC]["Z-"]["value"]["t_amb"], settings[:units]["temperature"], "K")
+    elseif settings["BC"]["Z-"]["type"] == "const_flux"
+        u[:,:,1] .= u[:,:,2] .+ settings["BC"]["Z-"]["value"]["value"] * (delta_z/k)
+    elseif settings["BC"]["Z-"]["type"] == "HTC"
+        h = settings["BC"]["Z-"]["value"]["value"]
+        t_amb = convert_units("temperature", settings["BC"]["Z-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[:,:,1] .= u[:,:,2]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
     end
 
     # Z+
     side = "Z+"
-    if settings[:BC]["Z+"]["type"] == "constant_T"
-        const_temp = convert_units("temperature", settings[:BC]["Z+"]["value"]["value"], settings[:units]["temperature"], "K") 
+    if settings["BC"]["Z+"]["type"] == "constant_T"
+        const_temp = convert_units("temperature", settings["BC"]["Z+"]["value"]["value"], settings["units"]["temperature"], "K") 
         u[:,:,end] .= 2*const_temp .- u[:,:,end-1]
-    elseif settings[:BC]["Z+"]["type"] == "insulated"
+    elseif settings["BC"]["Z+"]["type"] == "insulated"
         u[:,:,end] .= u[:,:,end-1]
-    elseif settings[:BC]["Z+"]["type"] == "const_flux"
-        u[:,:,end] .= u[:,:,end-1] .+ settings[:BC]["Z+"]["value"]["value"] * (delta_z/k)
-    elseif settings[:BC]["Z+"]["type"] == "HTC"
-        h = settings[:BC]["Z+"]["value"]["value"]
-        t_amb = convert_units("temperature", settings[:BC]["Z+"]["value"]["t_amb"], settings[:units]["temperature"], "K")
+    elseif settings["BC"]["Z+"]["type"] == "const_flux"
+        u[:,:,end] .= u[:,:,end-1] .+ settings["BC"]["Z+"]["value"]["value"] * (delta_z/k)
+    elseif settings["BC"]["Z+"]["type"] == "HTC"
+        h = settings["BC"]["Z+"]["value"]["value"]
+        t_amb = convert_units("temperature", settings["BC"]["Z+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
         u[:,:,end] .= u[:,:,end-1]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
     end
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    k_by_rho_cp, (X_nodes, Y_Nodes, Z_nodes), power_file, settings = p
+    k_by_rho_cp, (X_nodes, Y_nodes, Z_nodes), power_file, settings = p
 
-    println("Min and max of k_by_rho_cp : ", minimum(k_by_rho_cp), " and ", maximum(k_by_rho_cp))
-    println("alpha : ", minimum(k_by_rho_cp/dx^2))
+    # println("Min and max of k_by_rho_cp : ", minimum(k_by_rho_cp), " and ", maximum(k_by_rho_cp))
+    # println("alpha : ", minimum(k_by_rho_cp/dx^2))
 
     Nx, Ny, Nz = size(u)
 
@@ -647,6 +646,7 @@ function conduction_3d_loop!(du, u, p, t)
     Threads.@threads for k_ in range(2, Nz-1)
         Threads.@threads for j_ in range(2, Ny-1)
             Threads.@threads for i_ in range(2, Nx-1)
+                # println("start in the time int loop", Dates.format(now(), "HH:MM:SS"))
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
                 
                 dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
@@ -657,9 +657,9 @@ function conduction_3d_loop!(du, u, p, t)
                 dy_i_plus_half = (Y_nodes[j_+2] - Y_nodes[j_])/2
                 dz_i_plus_half = (Z_nodes[k_+2] - Z_nodes[k_])/2
 
-                dx = X_nodes[i+1] - X_nodes[i]
-                dy = Y_nodes[i+1] - Y_nodes[i]
-                dz = Z_nodes[i+1] - Z_nodes[i]
+                dx = X_nodes[i_+1] - X_nodes[i_]
+                dy = Y_nodes[j_+1] - Y_nodes[j_]
+                dz = Z_nodes[k_+1] - Z_nodes[k_]
 
                 Fx_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_]) / dx_i_minus_half
                 Fx_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_]) / dx_i_plus_half
@@ -670,12 +670,16 @@ function conduction_3d_loop!(du, u, p, t)
                 Fz_i_minus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, k_] - u[i_,j_,km1]) / dz_i_minus_half
                 Fz_i_plus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, kp1] - u[i_, j_, k_]) / dz_i_plus_half
 
+                # println("Done calculating all the fluxes ", Dates.format(now(), "HH:MM:SS"))
+
                 du[i_, j_, k_] =  Fx_i_plus_half - Fx_i_minus_half + Fy_i_plus_half - Fy_i_minus_half + Fz_i_plus_half - Fz_i_minus_half + source[i_, j_, k_]
             end
         end
     end
 
+    # println("Enter apply bc loop ", Dates.format(now(), "HH:MM:SS"))
     apply_bc(u, settings, 0.1, 0.1, 0.1)
+    # println("Done with apply BC ", Dates.format(now(), "HH:MM:SS"))
 
 end
 
@@ -685,8 +689,8 @@ function configure_problem_klu!(u0,p)
 
     f = ODEFunction(conduction_3d_loop!; jac_prototype = float.(jac_sparsity))
 
-    start_time = settings[:start_time]
-    end_time = settings[:end_time]
+    start_time = settings["start_time"]
+    end_time = settings["end_time"]
 
     prob_conduction_3d_sparse = ODEProblem(f, u0, (start_time, end_time), p)
 
@@ -696,8 +700,8 @@ function configure_problem_klu!(u0,p)
 end
 
 function configure_problem_ode!(u0,settings)
-    start_time = settings[:start_time]
-    end_time = settings[:end_time]
+    start_time = settings["start_time"]
+    end_time = settings["end_time"]
 
     # problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
     problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time))
@@ -753,29 +757,39 @@ function solve_(working_dir, power_file, settings, progress_file_name)
 
     u0 = initialize_domain!(u0, settings)
 
-    start_time = settings[:start_time]
-    end_time = settings[:end_time]
+    start_time = settings["start_time"]
+    end_time = settings["end_time"]
 
     problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
 
-    dt = settings[:dt]
-    n_steps = round(Int, settings[:end_time]/dt)
+    dt = settings["dt"]
+    n_steps = round(Int, settings["end_time"]/dt)
 
-    sol = zeros((n_steps, size(u0)...))
-    t_ = zeros(n_steps)
+    sol = zeros((100, size(u0)...))
+    t_ = zeros(100)
 
-    integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=100000)
-    for i in range(1,n_steps)
-        step!(integrator, dt, true)
+    println("Start time integration ", Dates.format(now(), "HH:MM:SS"))
+    integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=1000, progress=true)
+    println("Done with integrator def ", Dates.format(now(), "HH:MM:SS"))
+    for i in range(1,100)
+        # step!(integrator, dt, true)
+        step!(integrator)
         t,u = integrator.t, integrator.u
+        println("Solution time : ",t, " , at ", Dates.format(now(), "HH:MM:SS"))
         sol[i,:,:,:] = u
         t_[i] = t
+
+        if t > end_time
+            terminate!(integrator)
+            break
+        end
 
         progress_file = open(progress_file_name, "a")
         write(progress_file, string(i/n_steps*100))
         write(progress_file,"\n")
         close(progress_file)
     end
+    println("Done time integration ", Dates.format(now(), "HH:MM:SS"))
 
     return sol, t_
 end
@@ -805,22 +819,21 @@ function real_main()
     #include("/root/therml/therml/3d/therml_environment/src/unctions_fvm_3d.jl")
 
     f = open(joinpath(working_dir,"settings.json"), "r")
-    s1 = JSON.parse(f)
+    settings = JSON.parse(f)
+    # s1 = JSON.parse(f)
 
-    settings = Dict{Symbol, Any}()
-    for (k,v) in s1
-        settings[Symbol(k)] = v
-    end
+    # settings = Dict{Symbol, Any}()
+    # for (k,v) in s1
+    #     settings[Symbol(k)] = v
+    # end
 
     date_start = now()
     println("Start solution at : ", Dates.format(date_start, "HH:MM:SS"))
     sol,t_ = solve_(working_dir, scenario_name, settings, progress_file_name);
-    
-    println(t_)
 
-    # do_plotting(sol, sol_wd, settings, scenario_name, false);
+    #do_plotting(sol, sol_wd, settings, scenario_name, false);
     
-    save_fields(sol, t_, sol_wd, scenario_name);
+    # save_fields(sol, t_, sol_wd, scenario_name);
     
     date_end = now()
     println("End solution at : ", Dates.format(date_end, "HH:MM:SS"))

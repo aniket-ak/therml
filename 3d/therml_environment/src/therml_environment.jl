@@ -621,8 +621,47 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     end
 end
 
+function get_alpha((Nx,Ny,Nz), nodes, k_by_rho_cp)
+    X_nodes, Y_nodes, Z_nodes = nodes
+
+    alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half = zeros(Nx,Ny,Nz), 
+        zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz)
+
+    for k_ in range(2, Nz-1)
+        for j_ in range(2, Ny-1)
+            for i_ in range(2, Nx-1)
+                # println("start in the time int loop", Dates.format(now(), "HH:MM:SS"))
+                ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
+                
+                dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
+                dy_i_minus_half = (Y_nodes[j_+1] - Y_nodes[j_-1])/2
+                dz_i_minus_half = (Z_nodes[k_+1] - Z_nodes[k_-1])/2
+
+                dx_i_plus_half = (X_nodes[i_+2] - X_nodes[i_])/2
+                dy_i_plus_half = (Y_nodes[j_+2] - Y_nodes[j_])/2
+                dz_i_plus_half = (Z_nodes[k_+2] - Z_nodes[k_])/2
+
+                dx = X_nodes[i_+1] - X_nodes[i_]
+                dy = Y_nodes[j_+1] - Y_nodes[j_]
+                dz = Z_nodes[k_+1] - Z_nodes[k_]
+
+                alpha_x_i_minus_half[i_, j_, k_] = k_by_rho_cp[i_, j_, k_]/(dx * dx_i_minus_half)
+                alpha_x_i_plus_half[i_, j_, k_] = k_by_rho_cp[i_, j_, k_]/(dx * dx_i_plus_half)
+
+                alpha_y_i_minus_half[i_, j_, k_] = k_by_rho_cp[i_, j_, k_]/(dy * dy_i_minus_half)
+                alpha_y_i_plus_half[i_, j_, k_] = k_by_rho_cp[i_, j_, k_]/(dy * dy_i_plus_half)
+
+                alpha_z_i_minus_half[i_, j_, k_] = k_by_rho_cp[i_, j_, k_]/(dz * dz_i_minus_half)
+                alpha_z_i_plus_half[i_, j_, k_] = k_by_rho_cp[i_, j_, k_]/(dz * dz_i_plus_half)
+            end
+        end
+    end
+
+    return alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half
+end
+
 function conduction_3d_loop!(du, u, p, t)
-    k_by_rho_cp, (X_nodes, Y_nodes, Z_nodes), power_file, settings = p
+    k_by_rho_cp, (X_nodes, Y_nodes, Z_nodes), power_file, alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half, settings = p
 
     # println("Min and max of k_by_rho_cp : ", minimum(k_by_rho_cp), " and ", maximum(k_by_rho_cp))
     # println("alpha : ", minimum(k_by_rho_cp/dx^2))
@@ -649,26 +688,39 @@ function conduction_3d_loop!(du, u, p, t)
                 # println("start in the time int loop", Dates.format(now(), "HH:MM:SS"))
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
                 
-                dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
-                dy_i_minus_half = (Y_nodes[j_+1] - Y_nodes[j_-1])/2
-                dz_i_minus_half = (Z_nodes[k_+1] - Z_nodes[k_-1])/2
+                # dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
+                # dy_i_minus_half = (Y_nodes[j_+1] - Y_nodes[j_-1])/2
+                # dz_i_minus_half = (Z_nodes[k_+1] - Z_nodes[k_-1])/2
 
-                dx_i_plus_half = (X_nodes[i_+2] - X_nodes[i_])/2
-                dy_i_plus_half = (Y_nodes[j_+2] - Y_nodes[j_])/2
-                dz_i_plus_half = (Z_nodes[k_+2] - Z_nodes[k_])/2
+                # dx_i_plus_half = (X_nodes[i_+2] - X_nodes[i_])/2
+                # dy_i_plus_half = (Y_nodes[j_+2] - Y_nodes[j_])/2
+                # dz_i_plus_half = (Z_nodes[k_+2] - Z_nodes[k_])/2
 
-                dx = X_nodes[i_+1] - X_nodes[i_]
-                dy = Y_nodes[j_+1] - Y_nodes[j_]
-                dz = Z_nodes[k_+1] - Z_nodes[k_]
+                # dx = X_nodes[i_+1] - X_nodes[i_]
+                # dy = Y_nodes[j_+1] - Y_nodes[j_]
+                # dz = Z_nodes[k_+1] - Z_nodes[k_]
 
-                Fx_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_]) / dx_i_minus_half
-                Fx_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_]) / dx_i_plus_half
+                # Fx_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_]) / dx_i_minus_half
+                # Fx_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_]) / dx_i_plus_half
 
-                Fy_i_minus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, j_, k_] - u[i_,jm1,k_]) / dy_i_minus_half
-                Fy_i_plus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, jp1, k_] - u[i_, j_, k_]) / dy_i_plus_half
+                # Fy_i_minus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, j_, k_] - u[i_,jm1,k_]) / dy_i_minus_half
+                # Fy_i_plus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, jp1, k_] - u[i_, j_, k_]) / dy_i_plus_half
 
-                Fz_i_minus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, k_] - u[i_,j_,km1]) / dz_i_minus_half
-                Fz_i_plus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, kp1] - u[i_, j_, k_]) / dz_i_plus_half
+                # Fz_i_minus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, k_] - u[i_,j_,km1]) / dz_i_minus_half
+                # Fz_i_plus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, kp1] - u[i_, j_, k_]) / dz_i_plus_half
+
+                # # println("Done calculating all the fluxes ", Dates.format(now(), "HH:MM:SS"))
+
+                # du[i_, j_, k_] =  Fx_i_plus_half - Fx_i_minus_half + Fy_i_plus_half - Fy_i_minus_half + Fz_i_plus_half - Fz_i_minus_half + source[i_, j_, k_]
+
+                Fx_i_minus_half = alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_])
+                Fx_i_plus_half = alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_])
+
+                Fy_i_minus_half = alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_])
+                Fy_i_plus_half = alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_])
+
+                Fz_i_minus_half = alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1])
+                Fz_i_plus_half =  alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_])
 
                 # println("Done calculating all the fluxes ", Dates.format(now(), "HH:MM:SS"))
 
@@ -745,15 +797,17 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     progress_file = open(progress_file_name, "w")
     close(progress_file)
 
-    (X_nodes, Y_Nodes, Z_nodes) , (Nx,Ny,Nz) = generate_mesh(settings)
+    (X_nodes, Y_nodes, Z_nodes) , (Nx,Ny,Nz) = generate_mesh(settings)
     println("Mesh generation done")
     println("Mesh details - Total cells :", (Nx-2)*(Ny-2)*(Nz-2)/1e6, " M ", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
 
-    k_by_rho_cp = get_k_by_rho_cp((X_nodes, Y_Nodes, Z_nodes), (Nx, Ny, Nz), settings)
+    k_by_rho_cp = get_k_by_rho_cp((X_nodes, Y_nodes, Z_nodes), (Nx, Ny, Nz), settings)
 
     u0 = zeros(Nx,Ny,Nz)
 
-    p = (k_by_rho_cp, (X_nodes, Y_Nodes, Z_nodes), joinpath(working_dir,power_file), settings)
+    alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half = get_alpha((Nx,Ny,Nz), (X_nodes, Y_nodes, Z_nodes), k_by_rho_cp)
+
+    p = (k_by_rho_cp, (X_nodes, Y_nodes, Z_nodes), joinpath(working_dir,power_file), alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half, settings)
 
     u0 = initialize_domain!(u0, settings)
 
@@ -769,7 +823,7 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     t_ = zeros(100)
 
     println("Start time integration ", Dates.format(now(), "HH:MM:SS"))
-    integrator = init(problem; reltol=1e-4, abstol=1e-4, maxiters=1000, progress=true)
+    integrator = init(problem; reltol=1e-2, abstol=1e-2, maxiters=1000, progress=true)
     println("Done with integrator def ", Dates.format(now(), "HH:MM:SS"))
     for i in range(1,100)
         # step!(integrator, dt, true)

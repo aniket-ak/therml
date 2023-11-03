@@ -73,9 +73,9 @@
                 },
                 "mesh": {
                     "size" : {
-                        "dx":0.001,
-                        "dy":0.001,
-                        "dz":0.001
+                        "dx":0.00025,
+                        "dy":0.00025,
+                        "dz":0.0005
                     },
                     "precedence":100}
             },
@@ -187,6 +187,6 @@
         "smallest_thickness": 0.0005
     },
     "start_time": 0,
-    "end_time": 10,
-    "dt": 1
+    "end_time": 1000,
+    "dt":1
 }

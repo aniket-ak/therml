@@ -14,6 +14,7 @@ using JLD2
 using HDF5
 using Logging
 using LoggingExtras
+using Sundials
 
 function julia_main()::Cint
     try
@@ -34,37 +35,6 @@ end
 function round_off(list_)
     list_out = [round(i, digits=6) for i in list_]
     return list_out
-end
-
-function compute_differences(numbers)
-    return [numbers[i+1] - numbers[i] for i in 1:(length(numbers)-1)]
-end
-
-function find_gcd_of_list(numbers::Vector{Int64})
-    return reduce(gcd, numbers)
-end
-
-function nodes_from_vertices(vertices)
-    # find a large multiplier to convert the float vertices to int
-    large_multiplier = scaling_factor(vertices)
-
-    # println("Vertices : ", vertices)
-
-    # scale the vertices
-    scaled_up_vertices = [round(Int, i*large_multiplier) for i in vertices]
-
-    # compute the differences in the vertices. In some sense these differences are the edges of the model
-    differences = compute_differences(scaled_up_vertices)
-
-    # Find the GCD of the these differences. We cannot enforce a dx in our case. Enforcing dx may not capture the edges (differences) correctly
-    gcd_ = find_gcd_of_list(differences)
-
-    # Scale the dx back to original dimension
-    discretization = gcd_/large_multiplier
-
-    # Include ghost cells on extreme ends and discretize the domain and finally collect nodes
-    nodes = range(vertices[1]-discretization, vertices[end]+discretization, step=discretization)
-    return nodes, discretization
 end
 
 function get_vertices_from_bodies(settings)
@@ -683,8 +653,8 @@ function conduction_3d_loop!(du, u, p, t)
     # end
 
     Threads.@threads for k_ in range(2, Nz-1)
-        Threads.@threads for j_ in range(2, Ny-1)
-            Threads.@threads for i_ in range(2, Nx-1)
+        for j_ in range(2, Ny-1)
+            for i_ in range(2, Nx-1)
                 # println("start in the time int loop", Dates.format(now(), "HH:MM:SS"))
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
                 
@@ -713,18 +683,24 @@ function conduction_3d_loop!(du, u, p, t)
 
                 # du[i_, j_, k_] =  Fx_i_plus_half - Fx_i_minus_half + Fy_i_plus_half - Fy_i_minus_half + Fz_i_plus_half - Fz_i_minus_half + source[i_, j_, k_]
 
-                Fx_i_minus_half = alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_])
-                Fx_i_plus_half = alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_])
+                # Fx_i_minus_half = alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_])
+                # Fx_i_plus_half = alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_])
 
-                Fy_i_minus_half = alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_])
-                Fy_i_plus_half = alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_])
+                # Fy_i_minus_half = alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_])
+                # Fy_i_plus_half = alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_])
 
-                Fz_i_minus_half = alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1])
-                Fz_i_plus_half =  alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_])
+                # Fz_i_minus_half = alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1])
+                # Fz_i_plus_half =  alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_])
 
                 # println("Done calculating all the fluxes ", Dates.format(now(), "HH:MM:SS"))
 
-                du[i_, j_, k_] =  Fx_i_plus_half - Fx_i_minus_half + Fy_i_plus_half - Fy_i_minus_half + Fz_i_plus_half - Fz_i_minus_half + source[i_, j_, k_]
+                du[i_, j_, k_] =  alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_]) - 
+                                    alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_]) + 
+                                    alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_]) - 
+                                    alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_]) + 
+                                    alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_]) - 
+                                    alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1]) + 
+                                    source[i_, j_, k_]
             end
         end
     end
@@ -735,45 +711,10 @@ function conduction_3d_loop!(du, u, p, t)
 
 end
 
-function configure_problem_klu!(u0,p)
-    du0 = zeros(size(u0))
-    jac_sparsity = Symbolics.jacobian_sparsity((du, u) -> conduction_3d_loop!(du, u, p, 0.0), du0, u0)
-
-    f = ODEFunction(conduction_3d_loop!; jac_prototype = float.(jac_sparsity))
-
-    start_time = settings["start_time"]
-    end_time = settings["end_time"]
-
-    prob_conduction_3d_sparse = ODEProblem(f, u0, (start_time, end_time), p)
-
-    algorithm = KenCarp47(linsolve = KLUFactorization())
-
-    return prob_conduction_3d_sparse, algorithm
-end
-
-function configure_problem_ode!(u0,settings)
-    start_time = settings["start_time"]
-    end_time = settings["end_time"]
-
-    # problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time), p)
-    problem = ODEProblem(conduction_3d_loop!, u0, (start_time, end_time))
-    algorithm = ""
-
-    return problem, algorithm
-end
-
 function read_csv(file_name)
     data = CSV.read(file_name, DataFrame)
     mat = Matrix(data)
     return mat
-end
-
-function read_excel(file_name)
-    xf = XLSX.readxlsx(file_name)
-    XLSX.sheetnames(xf)
-    sh = xf["Sheet1"]
-    return sh[:]
-
 end
 
 function interpolate_(x,y,z,new_x,new_y)
@@ -798,8 +739,14 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     close(progress_file)
 
     (X_nodes, Y_nodes, Z_nodes) , (Nx,Ny,Nz) = generate_mesh(settings)
+
+    min_dx = minimum([X_nodes[i]-X_nodes[i-1] for i in range(2,size(X_nodes)[1])])
+    min_dy = minimum([Y_nodes[i]-Y_nodes[i-1] for i in range(2,size(Y_nodes)[1])])
+    min_dz = minimum([Z_nodes[i]-Z_nodes[i-1] for i in range(2,size(Z_nodes)[1])])
+
     println("Mesh generation done")
     println("Mesh details - Total cells :", (Nx-2)*(Ny-2)*(Nz-2)/1e6, " M ", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
+    println("Smallest cells in X, Y and Z are ", min_dx, " , ", min_dy, " , ", min_dz)
 
     k_by_rho_cp = get_k_by_rho_cp((X_nodes, Y_nodes, Z_nodes), (Nx, Ny, Nz), settings)
 
@@ -819,15 +766,15 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     dt = settings["dt"]
     n_steps = round(Int, settings["end_time"]/dt)
 
-    sol = zeros((100, size(u0)...))
-    t_ = zeros(100)
+    sol = zeros((n_steps, size(u0)...))
+    t_ = zeros(n_steps)
 
     println("Start time integration ", Dates.format(now(), "HH:MM:SS"))
-    integrator = init(problem; reltol=1e-2, abstol=1e-2, maxiters=1000, progress=true)
+    integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-2, abstol=1e-2, maxiters=1000, progress=true)
     println("Done with integrator def ", Dates.format(now(), "HH:MM:SS"))
-    for i in range(1,100)
-        # step!(integrator, dt, true)
-        step!(integrator)
+    for i in range(1,n_steps)
+        step!(integrator, dt, true)
+        # step!(integrator)
         t,u = integrator.t, integrator.u
         println("Solution time : ",t, " , at ", Dates.format(now(), "HH:MM:SS"))
         sol[i,:,:,:] = u

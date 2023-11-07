@@ -27,11 +27,6 @@ function julia_main()::Cint
 end
 int(x) = floor(Int, x)
 
-function scaling_factor(numbers::Vector{Float64})
-    max_decimal_places = maximum([length(split(string(num), ".")[2]) for num in numbers])
-    return 10^max_decimal_places
-end
-
 function round_off(list_)
     list_out = [round(i, digits=6) for i in list_]
     return list_out
@@ -118,9 +113,9 @@ function generate_mesh(settings)
     ghost_x_min = X[1] - bodies_["die"]["mesh"]["size"]["dx"]
     ghost_x_max = X[end] + bodies_["die"]["mesh"]["size"]["dx"]
     ghost_y_min = Y[1] - bodies_["die"]["mesh"]["size"]["dy"]
-    ghost_y_max = Y[end] - bodies_["die"]["mesh"]["size"]["dy"]
+    ghost_y_max = Y[end] + bodies_["die"]["mesh"]["size"]["dy"]
     ghost_z_min = Z[1] - bodies_["die"]["mesh"]["size"]["dz"]
-    ghost_z_max =  Z[end] - bodies_["die"]["mesh"]["size"]["dz"]
+    ghost_z_max =  Z[end] + bodies_["die"]["mesh"]["size"]["dz"]
 
     X_mesh = [ghost_x_min, X[1],X[end], ghost_x_max]
     Y_mesh = [ghost_y_min, Y[1],Y[end], ghost_y_max]
@@ -179,7 +174,7 @@ function generate_mesh(settings)
                 end
             end
 
-            min_num_nodes = max(2, round(Int, abs(mesh_point-X[i-1])/sizing))
+            min_num_nodes = max(2, round(Int, abs(mesh_point-X[i-1])/sizing)) + 1
             # println(X[i-1],"\t", mesh_point,"\t", min_num_nodes, "\t", sizing)
             mesh_ = range(X[i-1], mesh_point, min_num_nodes)|>collect
             # println(X[i-1], "\t", mesh_point, "\t", sizing, "\t", min_num_nodes, "\t", mesh_[end])
@@ -243,7 +238,7 @@ function generate_mesh(settings)
                 end
             end
 
-            min_num_nodes = max(2, round(Int, abs(mesh_point-Y[i-1])/sizing))
+            min_num_nodes = max(2, round(Int, abs(mesh_point-Y[i-1])/sizing)) + 1
             mesh_ = range(Y[i-1], mesh_point, min_num_nodes)|>collect
             # println(X[i-1], "\t", mesh_point, "\t", sizing, "\t", min_num_nodes, "\t", mesh_[end])
             append!(Y_mesh, mesh_)
@@ -306,7 +301,7 @@ function generate_mesh(settings)
                 end
             end
 
-            min_num_nodes = max(2, round(Int, abs(mesh_point-Z[i-1])/sizing))
+            min_num_nodes = max(2, round(Int, abs(mesh_point-Z[i-1])/sizing)) + 1
             # println(Z[i-1], "\t", mesh_point, "\t", sizing, "\t", min_num_nodes)
             mesh_ = range(Z[i-1], mesh_point, min_num_nodes)|>collect
             append!(Z_mesh, mesh_)

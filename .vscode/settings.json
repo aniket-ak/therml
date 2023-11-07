@@ -3,5 +3,6 @@
     "[python]": {
         "editor.defaultFormatter": "ms-python.autopep8"
     },
-    "python.formatting.provider": "ms-python.autopep8"
+    "python.formatting.provider": "ms-python.autopep8",
+    "julia.environmentPath": "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment"
 }

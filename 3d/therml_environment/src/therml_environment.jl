@@ -777,7 +777,7 @@ function real_main()
 
     #do_plotting(sol, sol_wd, settings, scenario_name, false);
     
-    # save_fields(sol, t_, sol_wd, scenario_name);
+    save_fields(sol, t_, sol_wd, scenario_name);
     
     date_end = now()
     println("End solution at : ", Dates.format(date_end, "HH:MM:SS"))

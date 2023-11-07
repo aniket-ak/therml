@@ -33,7 +33,7 @@
             }
         },
         {
-            "FR4 (Glass-Reinforced Epoxy Laminate)":
+            "FR4":
             {
                 "k": 0.3,
                 "cp": 1300,

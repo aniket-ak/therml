@@ -373,6 +373,7 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
         sol_name = name+"__solution.sol"
         solution_dir = os.path.join(os.path.join(working_dir_proj, run_name_proj), "Solution")
         file = os.path.join(solution_dir, sol_name)
+        print("File name", file)
         if slider_value is None:
             slider_value = 0
         if viz_time_value is None:
@@ -380,22 +381,32 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
         if os.path.exists(file):
             solution_, time_ = read_solution(file)
             contour_time = time_[np.where(time_==viz_time_value)]
+            contour_index = int(np.where(time_==viz_time_value)[0])
             if contour_time is not []:
+                print("inside plotting 1")
                 if viz_cut_plane == "XY":
-                    contour = solution_[contour_time, 1:-1, 1:-1, int(slider_value*solution_.shape[3])]
-                    fig_temp = px.imshow(contour[0],labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
+                    print("XY")
+                    contour = solution_[contour_index, 1:-1, 1:-1, int(slider_value*solution_.shape[3])]
+                    print("contour", contour.shape)
+                    print(contour)
+                    fig_temp = px.imshow(contour,labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
                 elif viz_cut_plane == "YZ":
-                    contour = solution_[contour_time, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
-                    fig_temp = px.imshow(contour[0],labels=dict(x="Y", y="Z",color="Temperature"),color_continuous_scale='jet')
+                    print("YZ")
+                    contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
+                    fig_temp = px.imshow(contour,labels=dict(x="Y", y="Z",color="Temperature"),color_continuous_scale='jet')
                 else:
-                    contour = solution_[contour_time, 1:-1, int(slider_value*solution_.shape[2]), 1:-1]
-                    fig_temp = px.imshow(contour[0],labels=dict(x="X", y="Z",color="Temperature"),color_continuous_scale='jet')
+                    print("XZ")
+                    contour = solution_[contour_index, 1:-1, int(slider_value*solution_.shape[2]), 1:-1]
+                    fig_temp = px.imshow(contour,labels=dict(x="X", y="Z",color="Temperature"),color_continuous_scale='jet')
                 
             else:
+                print("else1")
                 fig_temp = px.area()
         else:
+            print("else2")
             fig_temp = px.area()
     else:
+        print("else 3")
         fig_temp = px.area()
     return fig, fig_temp
 
@@ -499,7 +510,7 @@ def timer(active_page, values, n, status,colors, n_clicks):
                     content = f.readlines()
 
                     if len(content)>0:
-                        latest_progress = int(content[-1].split("|")[0].split(" ")[-1].split("%")[0])
+                        latest_progress = float(content[-1].split("\n")[0])
                         current_progress[i.split("__")[0]] = latest_progress
                     f.close()
     # print("progress ",current_progress)

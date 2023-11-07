@@ -10,14 +10,13 @@ import os
 def read_solution(file):
     f = h5py.File(file, "r")
     time_duration = len(f['solution'].keys())
-    sol_shape = np.array(list(f['solution']['1'])).T.shape
+    sol_shape = np.array(list(f['solution']['1.0'])).T.shape
 
     solution = np.empty((tuple([time_duration] + list(sol_shape))))
-    solution.shape
     for i in range(1,time_duration):
-        solution[i,:] = np.array(list(f['solution'][str(i)])).T
+        solution[i,:] = np.array(list(f['solution'][str(float(i))])).T
     time_ = list(f['solution'].keys())
-    time_ = [int(i) for i in time_]
+    time_ = [float(i) for i in time_]
     time_.sort()
     time_ = np.array(time_)
     return solution, time_
@@ -34,8 +33,6 @@ def save_to_json(file, inputs):
     mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
     mold_surface_material, die_surface_material, underfill_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials, 
     ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp) = inputs
-
-    print(mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials)
 
     settings_file = os.path.join("../", "3d/settings.json")
     with open(settings_file, 'r') as settings_f:
@@ -113,7 +110,7 @@ def save_to_json(file, inputs):
     settings_data["end_time"] = end_time
 
     with open(file, 'w') as f:
-        json.dump(settings_data,f)
+        json.dump(settings_data,f, indent=2)
 
 class StdoutCapture:
     def __init__(self):
@@ -126,8 +123,7 @@ def run_julia(working_dir, scenario_name, run_name, output_queue):
     try:
         command = ["julia", "--project=/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment", 
                              "/Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl", 
-                             "-t", "4", "-working_dir", working_dir, "-power", scenario_name, "-run_name", 
-                             run_name]
+                             working_dir, scenario_name, run_name]
         stdout_capture = StdoutCapture()
 
         process = subprocess.Popen(

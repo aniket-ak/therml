@@ -14,7 +14,7 @@ def read_solution(file):
 
     solution = np.empty((tuple([time_duration] + list(sol_shape))))
     for i in range(1,time_duration):
-        solution[i,:] = np.array(list(f['solution'][str(float(i))])).T
+        solution[i,:] = np.array(list(f['solution'][str(float(i))]))
     time_ = list(f['solution'].keys())
     time_ = [float(i) for i in time_]
     time_.sort()

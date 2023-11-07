@@ -417,32 +417,31 @@ function initialize_domain!(u0, settings)
     return u0
 end
 
-function define_volume_sources(power_file, settings, Nx, Ny, Nz)
+function define_volume_sources(power_file, settings, Nx, Ny, Nz, X_nodes, Y_nodes, Z_nodes)
     source = zeros(Nx,Ny,Nz)
     # source[10:20, 50:70, 1:5] .= 1
 
     x_length = settings["model"]["bodies"]["die"]["size"]["X"]
     y_length = settings["model"]["bodies"]["die"]["size"]["Y"]
-    z_length = settings["model"]["bodies"]["die"]["size"]["Z"]
+    source_z_val = settings["model"]["bodies"]["solder"]["size"]["Z"] + 
+                    settings["model"]["bodies"]["substrate"]["size"]["Z"] + 
+                    settings["model"]["bodies"]["bumps"]["size"]["Z"] + 
+                    settings["model"]["bodies"]["die"]["size"]["Z"]
 
-    x_normalized = x_length/z_length
-    y_normalized = y_length/z_length
-    z_normalized = z_length/z_length
+    die_nodes_x = (findall(x -> x == -x_length/2, X_nodes)[1], findall(x -> x == x_length/2, X_nodes)[1])
+    die_nodes_y = (findall(x -> x == -y_length/2, Y_nodes)[1], findall(x -> x == y_length/2, Y_nodes)[1])
 
-    x_mesh = range(0, stop = x_normalized, length = Nx+1)
-    y_mesh = range(0, stop = y_normalized, length = Ny+1)
-    z_mesh = range(0, stop = z_normalized, length = Nz+1)
-
-    cell_centers_x = range(step(x_mesh)/2, stop = x_normalized-step(x_mesh)/2, length = Nx)
-    cell_centers_y = range(step(y_mesh)/2, stop = x_normalized-step(y_mesh)/2, length = Ny)
+    cell_centers_x = [(X_nodes[i]+X_nodes[i+1])/2 for i in die_nodes_x[1]:die_nodes_x[2]-1]
+    cell_centers_y = [(Y_nodes[i]+Y_nodes[i+1])/2 for i in die_nodes_y[1]:die_nodes_y[2]-1]
 
     heat_values = read_csv(power_file)
     source_Nx, source_Ny = size(heat_values)
-    source_x = range(0, x_normalized, source_Nx)
-    source_y = range(0, y_normalized, source_Ny)
+    source_x = range(-x_length/2, x_length/2, source_Nx) |> collect
+    source_y = range(-y_length/2, y_length/2, source_Ny) |> collect
 
-    interpolated_heat = interpolate_(source_x,source_y,heat_values,cell_centers_x,cell_centers_y)
-    source[:,:,2] = interpolated_heat
+    interpolated_heat = transpose(interpolate_(source_x,source_y,heat_values,cell_centers_x,cell_centers_y))
+    source_index = findall(x -> x == source_z_val, Z_nodes)[1]-1
+    source[die_nodes_x[1]:die_nodes_x[2]-1,die_nodes_y[1]:die_nodes_y[2]-1,source_index] = interpolated_heat
     return source
 end
 
@@ -633,7 +632,7 @@ function conduction_3d_loop!(du, u, p, t)
 
     Nx, Ny, Nz = size(u)
 
-    source = define_volume_sources(power_file, settings, Nx,Ny,Nz)
+    source = define_volume_sources(power_file, settings, Nx,Ny,Nz, X_nodes, Y_nodes, Z_nodes)
 
     Threads.@threads for k_ in range(2, Nz-1)
         for j_ in range(2, Ny-1)
@@ -655,7 +654,7 @@ function conduction_3d_loop!(du, u, p, t)
 end
 
 function read_csv(file_name)
-    data = CSV.read(file_name, DataFrame)
+    data = CSV.read(file_name, DataFrame, header=false)
     mat = Matrix(data)
     return mat
 end

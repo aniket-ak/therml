@@ -329,8 +329,8 @@ end
 
 function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
     nodes_x, nodes_y, nodes_z = nodes
-    k_by_rho_cp = zeros(Nx, Ny, Nz)
-    k_ = zeros(Nx, Ny, Nz)
+    k_by_rho_cp = ones(Nx, Ny, Nz)
+    k_ = ones(Nx, Ny, Nz)
     
     X,Y,Z = get_vertices_from_bodies(settings)
 
@@ -407,7 +407,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
         end
     end
     
-    return k_by_rho_cp, k
+    return k_by_rho_cp, k_
 end
 
 function initialize_domain!(u0, settings)
@@ -499,9 +499,8 @@ function convert_units(quantity, value, from_units, to_units)
     end
 end
 
-function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, delta_z_e)
-    # k = settings["model"]["bodies"]["die"]["material"]["k"]
-
+function apply_bc(settings, u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, delta_z_e)
+    
     # At X-
     side = "X-"
     if settings["BC"]["X-"]["type"] == "constant_T"
@@ -510,11 +509,11 @@ function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, d
     elseif settings["BC"]["X-"]["type"] == "insulated"
         u[1,:,:] .= u[2,:,:]
     elseif settings["BC"]["X-"]["type"] == "const_flux"
-        u[1,:,:] .= u[2,:,:] .+ settings["BC"]["X-"]["value"]["value"] * (delta_x_s ./ k[1, :, :])
+        @. u[1,:,:] = u[2,:,:] + settings["BC"]["X-"]["value"]["value"] * (delta_x_s / k[1, :, :])
     elseif settings["BC"]["X-"]["type"] == "HTC"
         h = settings["BC"]["X-"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["X-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[1,:,:] .= u[2,:,:]*(1 - delta_x_s * h ./ k[1,:,:]) .+ (h*delta_x_s ./ k[1, :, :]) * t_amb
+        @. u[1,:,:] .= u[2,:,:] * (1 - delta_x_s * h / k[1,:,:]) + (h*delta_x_s / k[1, :, :]) * t_amb
     end
 
     # At X+
@@ -525,11 +524,11 @@ function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, d
     elseif settings["BC"]["X+"]["type"] == "insulated"
         u[end,:,:] .= u[end-1,:,:]
     elseif settings["BC"]["X+"]["type"] == "const_flux"
-        u[end,:,:] .= u[end-1,:,:] .+ settings["BC"]["X+"]["value"]["value"] * (delta_x_e ./ k[end, :, :])
+        @. u[end,:,:] = u[end-1,:,:] + settings["BC"]["X+"]["value"]["value"] * (delta_x_e / k[end, :, :])
     elseif settings["BC"]["X+"]["type"] == "HTC"
         h = settings["BC"]["X+"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["X+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[end,:,:] .= u[end-1,:,:]*(1 - delta_x_e * h ./ k[end, : ,:]) .+ (h*delta_x_e ./ k[end, :, :]) * t_amb
+        @. u[end,:,:] .= u[end-1,:,:]*(1 - delta_x_e * h ./ k[end, : ,:]) .+ (h*delta_x_e ./ k[end, :, :]) * t_amb
     end
 
     # Y-
@@ -540,11 +539,11 @@ function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, d
     elseif settings["BC"]["Y-"]["type"] == "insulated"
         u[:,1,:] .= u[:,2,:]
     elseif settings["BC"]["Y-"]["type"] == "const_flux"
-        u[:,1,:] .= u[:,2,:] .+ settings["BC"]["Y-"]["value"]["value"] * (delta_y_s ./ k[:, 1, :])
+        @. u[:,1,:] = u[:,2,:] + settings["BC"]["Y-"]["value"]["value"] * (delta_y_s / k[:, 1, :])
     elseif settings["BC"]["Y-"]["type"] == "HTC"
         h = settings["BC"]["Y-"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Y-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,1,:] .= u[:,2,:]*(1 - delta_y_s * h ./ k[:, 1, :]) .+ (h*delta_y_s ./ k[:, 1, :]) * t_amb
+        @. u[:,1,:] .= u[:,2,:]*(1 - delta_y_s * h ./ k[:, 1, :]) .+ (h*delta_y_s ./ k[:, 1, :]) * t_amb
     end
     
     # Y+
@@ -555,11 +554,11 @@ function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, d
     elseif settings["BC"]["Y+"]["type"] == "insulated"
         u[:,end,:] .= u[:,end-1,:]
     elseif settings["BC"]["Y+"]["type"] == "const_flux"
-        u[:,end,:] .= u[:,end-1,:] .+ settings["BC"]["Y+"]["value"]["value"] * (delta_y_e ./ k[:, end, :])
+        @. u[:,end,:] = u[:,end-1,:] + settings["BC"]["Y+"]["value"]["value"] * (delta_y_e / k[:, end, :])
     elseif settings["BC"]["Y+"]["type"] == "HTC"
         h = settings["BC"]["Y+"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Y+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,end,:] .= u[:,end-1,:]*(1 - delta_y_e * h ./ k[:, end, :]) .+ (h*delta_y_e ./ k[:, end, :]) * t_amb
+        @. u[:,end,:] .= u[:,end-1,:]*(1 - delta_y_e * h ./ k[:, end, :]) .+ (h*delta_y_e ./ k[:, end, :]) * t_amb
     end
 
     # Z-
@@ -570,11 +569,11 @@ function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, d
     elseif settings["BC"]["Z-"]["type"] == "insulated"
         u[:,:,1] .= u[:,:,2]
     elseif settings["BC"]["Z-"]["type"] == "const_flux"
-        u[:,:,1] .= u[:,:,2] .+ settings["BC"]["Z-"]["value"]["value"] * (delta_z_s ./ k[:, :, 1])
+        @. u[:,:,1] = u[:,:,2] + settings["BC"]["Z-"]["value"]["value"] * (delta_z_s / k[:, :, 1])
     elseif settings["BC"]["Z-"]["type"] == "HTC"
         h = settings["BC"]["Z-"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Z-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,:,1] .= u[:,:,2]*(1 - delta_z_s * h ./ k[:, :, 1]) .+ (h*delta_z_s ./ k[:, :, 1]) * t_amb
+        @. u[:,:,1] .= u[:,:,2]*(1 - delta_z_s * h ./ k[:, :, 1]) .+ (h*delta_z_s ./ k[:, :, 1]) * t_amb
     end
 
     # Z+
@@ -585,11 +584,11 @@ function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, d
     elseif settings["BC"]["Z+"]["type"] == "insulated"
         u[:,:,end] .= u[:,:,end-1]
     elseif settings["BC"]["Z+"]["type"] == "const_flux"
-        u[:,:,end] .= u[:,:,end-1] .+ settings["BC"]["Z+"]["value"]["value"] * (delta_z_e ./ k[:, :, end])
+        @. u[:,:,end] = u[:,:,end-1] + settings["BC"]["Z+"]["value"]["value"] * (delta_z_e / k[:, :, end])
     elseif settings["BC"]["Z+"]["type"] == "HTC"
         h = settings["BC"]["Z+"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Z+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,:,end] .= u[:,:,end-1]*(1 - delta_z_e * h ./ k[:, :, end]) .+ (h*delta_z_e ./ k[:, :, end]) * t_amb
+        @. u[:,:,end] = u[:,:,end-1]*(1 - delta_z_e * h / k[:, :, end]) + (h*delta_z_e / k[:, :, end]) * t_amb
     end
 end
 
@@ -650,7 +649,7 @@ function conduction_3d_loop!(du, u, p, t)
             end
         end
     end
-    apply_bc(u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
+    apply_bc(settings, u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
                 abs(Y_nodes[2] - Y_nodes[1]), abs(Y_nodes[end] - Y_nodes[end-1]), 
                 abs(Z_nodes[2]-Z_nodes[1]), abs(Z_nodes[end] - Z_nodes[end-1]))
 end

@@ -666,6 +666,7 @@ function interpolate_(x,y,z,new_x,new_y)
 end
 
 function save_fields(sol, t_, sol_wd, scenario_name)
+    println("Solution shape", size(sol))
     h5open(joinpath(sol_wd,scenario_name*"__solution.sol"), "w") do file
         g = HDF5.create_group(file, "solution")
 

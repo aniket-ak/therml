@@ -330,6 +330,7 @@ end
 function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
     nodes_x, nodes_y, nodes_z = nodes
     k_by_rho_cp = zeros(Nx, Ny, Nz)
+    k_ = zeros(Nx, Ny, Nz)
     
     X,Y,Z = get_vertices_from_bodies(settings)
 
@@ -356,6 +357,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_solder, x_end_solder), (y_start_solder, y_end_solder), (z_start_solder, z_end_solder)))
                     if precedence < solder_precedence
                         k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["solder"]["material"]["k"] / (settings["model"]["bodies"]["solder"]["material"]["rho"] * settings["model"]["bodies"]["solder"]["material"]["cp"])
+                        k_[i,j,k] = settings["model"]["bodies"]["solder"]["material"]["k"]
                         precedence = solder_precedence
                     end
                     # println("Point falls in solder ", x_*1e3, ",", y_*1e3, ",", z_*1e3, " Solder bounds x", x_start_solder*1e3, ",", x_end_solder*1e3)
@@ -364,6 +366,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_substrate, x_end_substrate), (y_start_substrate, y_end_substrate), (z_start_substrate, z_end_substrate)))
                     if precedence < substrate_precedence
                         k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["substrate"]["material"]["k"] / (settings["model"]["bodies"]["substrate"]["material"]["rho"] * settings["model"]["bodies"]["substrate"]["material"]["cp"])
+                        k_[i,j,k] = settings["model"]["bodies"]["substrate"]["material"]["k"]
                         precedence = substrate_precedence
                     end
                 end
@@ -371,6 +374,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_bumps, x_end_bumps), (y_start_bumps, y_end_bumps), (z_start_bumps, z_end_bumps)))
                     if precedence < bumps_precedence
                         k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["bumps"]["material"]["k"] / (settings["model"]["bodies"]["bumps"]["material"]["rho"] * settings["model"]["bodies"]["bumps"]["material"]["cp"])
+                        k_[i,j,k] = settings["model"]["bodies"]["bumps"]["material"]["k"]
                         precedence = bumps_precedence
                     end
                 end
@@ -378,6 +382,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_mold, x_end_mold), (y_start_mold, y_end_mold), (z_start_mold, z_end_mold)))
                     if precedence < mold_precedence
                         k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["mold"]["material"]["k"] / (settings["model"]["bodies"]["mold"]["material"]["rho"] * settings["model"]["bodies"]["mold"]["material"]["cp"])
+                        k_[i,j,k] = settings["model"]["bodies"]["mold"]["material"]["k"]
                         precedence = mold_precedence
                     end
                 end
@@ -385,6 +390,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_underfill, x_end_underfill), (y_start_underfill, y_end_underfill), (z_start_underfill, z_end_underfill)))
                     if precedence < underfill_precedence
                         k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["underfill"]["material"]["k"] / (settings["model"]["bodies"]["underfill"]["material"]["rho"] * settings["model"]["bodies"]["underfill"]["material"]["cp"])
+                        k_[i,j,k] = settings["model"]["bodies"]["underfill"]["material"]["k"]
                         precedence = underfill_precedence
                     end
                 end
@@ -392,6 +398,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
                 if cell_belongs_to_bbox((x_,y_,z_), ((x_start_die, x_end_die), (y_start_die, y_end_die), (z_start_die, z_end_die)))
                     if precedence < die_precedence
                         k_by_rho_cp[i,j,k] = settings["model"]["bodies"]["die"]["material"]["k"] / (settings["model"]["bodies"]["die"]["material"]["rho"] * settings["model"]["bodies"]["die"]["material"]["cp"])
+                        k_[i,j,k] = settings["model"]["bodies"]["die"]["material"]["k"]
                         precedence = die_precedence
                     end
                 end
@@ -400,7 +407,7 @@ function get_k_by_rho_cp(nodes, (Nx, Ny, Nz), settings)
         end
     end
     
-    return k_by_rho_cp
+    return k_by_rho_cp, k
 end
 
 function initialize_domain!(u0, settings)
@@ -492,8 +499,8 @@ function convert_units(quantity, value, from_units, to_units)
     end
 end
 
-function apply_bc(u, settings, delta_x, delta_y, delta_z)
-    k = settings["model"]["bodies"]["die"]["material"]["k"]
+function apply_bc(u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, delta_z_s, delta_z_e)
+    # k = settings["model"]["bodies"]["die"]["material"]["k"]
 
     # At X-
     side = "X-"
@@ -503,11 +510,11 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     elseif settings["BC"]["X-"]["type"] == "insulated"
         u[1,:,:] .= u[2,:,:]
     elseif settings["BC"]["X-"]["type"] == "const_flux"
-        u[1,:,:] .= u[2,:,:] .+ settings["BC"]["X-"]["value"]["value"] * (delta_x/k)
+        u[1,:,:] .= u[2,:,:] .+ settings["BC"]["X-"]["value"]["value"] * (delta_x_s ./ k[1, :, :])
     elseif settings["BC"]["X-"]["type"] == "HTC"
         h = settings["BC"]["X-"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["X-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[1,:,:] .= u[2,:,:]*(1 - delta_x * h/k) .+ (h*delta_x/k) * t_amb
+        u[1,:,:] .= u[2,:,:]*(1 - delta_x_s * h ./ k[1,:,:]) .+ (h*delta_x_s ./ k[1, :, :]) * t_amb
     end
 
     # At X+
@@ -518,11 +525,11 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     elseif settings["BC"]["X+"]["type"] == "insulated"
         u[end,:,:] .= u[end-1,:,:]
     elseif settings["BC"]["X+"]["type"] == "const_flux"
-        u[end,:,:] .= u[end-1,:,:] .+ settings["BC"]["X+"]["value"]["value"] * (delta_x/k)
+        u[end,:,:] .= u[end-1,:,:] .+ settings["BC"]["X+"]["value"]["value"] * (delta_x_e ./ k[end, :, :])
     elseif settings["BC"]["X+"]["type"] == "HTC"
         h = settings["BC"]["X+"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["X+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[end,:,:] .= u[end-1,:,:]*(1 - delta_x * h/k) .+ (h*delta_x/k) * t_amb
+        u[end,:,:] .= u[end-1,:,:]*(1 - delta_x_e * h ./ k[end, : ,:]) .+ (h*delta_x_e ./ k[end, :, :]) * t_amb
     end
 
     # Y-
@@ -533,11 +540,11 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     elseif settings["BC"]["Y-"]["type"] == "insulated"
         u[:,1,:] .= u[:,2,:]
     elseif settings["BC"]["Y-"]["type"] == "const_flux"
-        u[:,1,:] .= u[:,2,:] .+ settings["BC"]["Y-"]["value"]["value"] * (delta_y/k)
+        u[:,1,:] .= u[:,2,:] .+ settings["BC"]["Y-"]["value"]["value"] * (delta_y_s ./ k[:, 1, :])
     elseif settings["BC"]["Y-"]["type"] == "HTC"
         h = settings["BC"]["Y-"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Y-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,1,:] .= u[:,2,:]*(1 - delta_y * h/k) .+ (h*delta_y/k) * t_amb
+        u[:,1,:] .= u[:,2,:]*(1 - delta_y_s * h ./ k[:, 1, :]) .+ (h*delta_y_s ./ k[:, 1, :]) * t_amb
     end
     
     # Y+
@@ -548,11 +555,11 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     elseif settings["BC"]["Y+"]["type"] == "insulated"
         u[:,end,:] .= u[:,end-1,:]
     elseif settings["BC"]["Y+"]["type"] == "const_flux"
-        u[:,end,:] .= u[:,end-1,:] .+ settings["BC"]["Y+"]["value"]["value"] * (delta_y/k)
+        u[:,end,:] .= u[:,end-1,:] .+ settings["BC"]["Y+"]["value"]["value"] * (delta_y_e ./ k[:, end, :])
     elseif settings["BC"]["Y+"]["type"] == "HTC"
         h = settings["BC"]["Y+"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Y+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,end,:] .= u[:,end-1,:]*(1 - delta_y * h/k) .+ (h*delta_y/k) * t_amb
+        u[:,end,:] .= u[:,end-1,:]*(1 - delta_y_e * h ./ k[:, end, :]) .+ (h*delta_y_e ./ k[:, end, :]) * t_amb
     end
 
     # Z-
@@ -563,11 +570,11 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     elseif settings["BC"]["Z-"]["type"] == "insulated"
         u[:,:,1] .= u[:,:,2]
     elseif settings["BC"]["Z-"]["type"] == "const_flux"
-        u[:,:,1] .= u[:,:,2] .+ settings["BC"]["Z-"]["value"]["value"] * (delta_z/k)
+        u[:,:,1] .= u[:,:,2] .+ settings["BC"]["Z-"]["value"]["value"] * (delta_z_s ./ k[:, :, 1])
     elseif settings["BC"]["Z-"]["type"] == "HTC"
         h = settings["BC"]["Z-"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Z-"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,:,1] .= u[:,:,2]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
+        u[:,:,1] .= u[:,:,2]*(1 - delta_z_s * h ./ k[:, :, 1]) .+ (h*delta_z_s ./ k[:, :, 1]) * t_amb
     end
 
     # Z+
@@ -578,11 +585,11 @@ function apply_bc(u, settings, delta_x, delta_y, delta_z)
     elseif settings["BC"]["Z+"]["type"] == "insulated"
         u[:,:,end] .= u[:,:,end-1]
     elseif settings["BC"]["Z+"]["type"] == "const_flux"
-        u[:,:,end] .= u[:,:,end-1] .+ settings["BC"]["Z+"]["value"]["value"] * (delta_z/k)
+        u[:,:,end] .= u[:,:,end-1] .+ settings["BC"]["Z+"]["value"]["value"] * (delta_z_e ./ k[:, :, end])
     elseif settings["BC"]["Z+"]["type"] == "HTC"
         h = settings["BC"]["Z+"]["value"]["value"]
         t_amb = convert_units("temperature", settings["BC"]["Z+"]["value"]["t_amb"], settings["units"]["temperature"], "K")
-        u[:,:,end] .= u[:,:,end-1]*(1 - delta_z * h/k) .+ (h*delta_z/k) * t_amb
+        u[:,:,end] .= u[:,:,end-1]*(1 - delta_z_e * h ./ k[:, :, end]) .+ (h*delta_z_e ./ k[:, :, end]) * t_amb
     end
 end
 
@@ -623,69 +630,16 @@ function get_alpha((Nx,Ny,Nz), nodes, k_by_rho_cp)
 end
 
 function conduction_3d_loop!(du, u, p, t)
-    k_by_rho_cp, (X_nodes, Y_nodes, Z_nodes), power_file, alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half, settings = p
-
-    # println("Min and max of k_by_rho_cp : ", minimum(k_by_rho_cp), " and ", maximum(k_by_rho_cp))
-    # println("alpha : ", minimum(k_by_rho_cp/dx^2))
+    (X_nodes, Y_nodes, Z_nodes), power_file, alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half, k, settings = p
 
     Nx, Ny, Nz = size(u)
 
     source = define_volume_sources(power_file, settings, Nx,Ny,Nz)
 
-    # Threads.@threads for k_ in range(2, Nz-1)
-    #     Threads.@threads for j_ in range(2, Ny-1)
-    #         Threads.@threads for i_ in range(2, Nx-1)
-    #             ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
-    #             du[i_, j_, k_] =  k_by_rho_cp[i_, j_, k_]/(dx^2) * (u[im1, j_, k_] + u[ip1, j_, k_] - 2u[i_,j_, k_])+
-    #                                 k_by_rho_cp[i_, j_, k_]/(dy^2) * (u[i_, jp1, k_] + u[i_, jm1, k_] - 2u[i_, j_, k_]) + 
-    #                                 k_by_rho_cp[i_, j_, k_]/(dz^2) * (u[i_, j_, kp1] + u[i_, j_, km1] - 2u[i_, j_, k_]) +  
-    #                                 source[i_, j_, k_]
-    #         end
-    #     end
-    # end
-
     Threads.@threads for k_ in range(2, Nz-1)
         for j_ in range(2, Ny-1)
             for i_ in range(2, Nx-1)
-                # println("start in the time int loop", Dates.format(now(), "HH:MM:SS"))
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
-                
-                # dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
-                # dy_i_minus_half = (Y_nodes[j_+1] - Y_nodes[j_-1])/2
-                # dz_i_minus_half = (Z_nodes[k_+1] - Z_nodes[k_-1])/2
-
-                # dx_i_plus_half = (X_nodes[i_+2] - X_nodes[i_])/2
-                # dy_i_plus_half = (Y_nodes[j_+2] - Y_nodes[j_])/2
-                # dz_i_plus_half = (Z_nodes[k_+2] - Z_nodes[k_])/2
-
-                # dx = X_nodes[i_+1] - X_nodes[i_]
-                # dy = Y_nodes[j_+1] - Y_nodes[j_]
-                # dz = Z_nodes[k_+1] - Z_nodes[k_]
-
-                # Fx_i_minus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[i_, j_, k_] - u[im1,j_,k_]) / dx_i_minus_half
-                # Fx_i_plus_half = k_by_rho_cp[i_, j_, k_]/dx * (u[ip1, j_, k_] - u[i_, j_, k_]) / dx_i_plus_half
-
-                # Fy_i_minus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, j_, k_] - u[i_,jm1,k_]) / dy_i_minus_half
-                # Fy_i_plus_half = k_by_rho_cp[i_, j_, k_]/dy * (u[i_, jp1, k_] - u[i_, j_, k_]) / dy_i_plus_half
-
-                # Fz_i_minus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, k_] - u[i_,j_,km1]) / dz_i_minus_half
-                # Fz_i_plus_half = k_by_rho_cp[i_, j_, k_]/dz * (u[i_, j_, kp1] - u[i_, j_, k_]) / dz_i_plus_half
-
-                # # println("Done calculating all the fluxes ", Dates.format(now(), "HH:MM:SS"))
-
-                # du[i_, j_, k_] =  Fx_i_plus_half - Fx_i_minus_half + Fy_i_plus_half - Fy_i_minus_half + Fz_i_plus_half - Fz_i_minus_half + source[i_, j_, k_]
-
-                # Fx_i_minus_half = alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_])
-                # Fx_i_plus_half = alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_])
-
-                # Fy_i_minus_half = alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_])
-                # Fy_i_plus_half = alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_])
-
-                # Fz_i_minus_half = alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1])
-                # Fz_i_plus_half =  alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_])
-
-                # println("Done calculating all the fluxes ", Dates.format(now(), "HH:MM:SS"))
-
                 du[i_, j_, k_] =  alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_]) - 
                                     alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_]) + 
                                     alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_]) - 
@@ -696,11 +650,9 @@ function conduction_3d_loop!(du, u, p, t)
             end
         end
     end
-
-    # println("Enter apply bc loop ", Dates.format(now(), "HH:MM:SS"))
-    apply_bc(u, settings, 0.1, 0.1, 0.1)
-    # println("Done with apply BC ", Dates.format(now(), "HH:MM:SS"))
-
+    apply_bc(u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
+                abs(Y_nodes[2] - Y_nodes[1]), abs(Y_nodes[end] - Y_nodes[end-1]), 
+                abs(Z_nodes[2]-Z_nodes[1]), abs(Z_nodes[end] - Z_nodes[end-1]))
 end
 
 function read_csv(file_name)
@@ -740,13 +692,13 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     println("Mesh details - Total cells :", (Nx-2)*(Ny-2)*(Nz-2)/1e6, " M ", "with ", Nx-2, ",", Ny-2, ", and ", Nz-2, " in X,Y and Z")
     println("Smallest cells in X, Y and Z are ", min_dx, " , ", min_dy, " , ", min_dz)
 
-    k_by_rho_cp = get_k_by_rho_cp((X_nodes, Y_nodes, Z_nodes), (Nx, Ny, Nz), settings)
+    k_by_rho_cp, k = get_k_by_rho_cp((X_nodes, Y_nodes, Z_nodes), (Nx, Ny, Nz), settings)
 
     u0 = zeros(Nx,Ny,Nz)
 
     alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half = get_alpha((Nx,Ny,Nz), (X_nodes, Y_nodes, Z_nodes), k_by_rho_cp)
 
-    p = (k_by_rho_cp, (X_nodes, Y_nodes, Z_nodes), joinpath(working_dir,power_file), alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half, settings)
+    p = ((X_nodes, Y_nodes, Z_nodes), joinpath(working_dir,power_file), alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half, k, settings)
 
     u0 = initialize_domain!(u0, settings)
 

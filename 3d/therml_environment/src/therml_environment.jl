@@ -595,9 +595,6 @@ function get_alpha((Nx,Ny,Nz), nodes, k_by_rho_cp)
     for k_ in range(2, Nz-1)
         for j_ in range(2, Ny-1)
             for i_ in range(2, Nx-1)
-                # println("start in the time int loop", Dates.format(now(), "HH:MM:SS"))
-                ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
-                
                 dx_i_minus_half = (X_nodes[i_+1] - X_nodes[i_-1])/2
                 dy_i_minus_half = (Y_nodes[j_+1] - Y_nodes[j_-1])/2
                 dz_i_minus_half = (Z_nodes[k_+1] - Z_nodes[k_-1])/2

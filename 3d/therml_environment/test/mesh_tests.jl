@@ -2,7 +2,7 @@ using Test
 using JSON
 using therml_environment
 
-f = open("./3d/therml_environment/test/settings.json", "r")
+f = open("./3d/therml_environment/test/settings_mesher_test.json", "r")
 settings = JSON.parse(f)
 
 (X_nodes, Y_nodes, Z_nodes) , (Nx,Ny,Nz) = therml_environment.generate_mesh(settings)

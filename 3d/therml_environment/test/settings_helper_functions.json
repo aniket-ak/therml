@@ -1,0 +1,192 @@
+{
+    "problem": "3d",
+    "units": {
+        "temperature": "C",
+        "length": "m",
+        "time": "s",
+        "velocity": "m/s",
+        "acceleration": "m/s2",
+        "pressure": "atm",
+        "power": "W",
+        "flux": "W/m2"
+    },
+    "BC": {
+        "X+": {
+            "type": "insulated",
+            "value": {
+                "t_amb": 25,
+                "value": 10000
+            }
+        },
+        "X-": {
+            "type": "HTC",
+            "value": {
+                "t_amb": 25,
+                "value": 100
+            }
+        },
+        "Y+": {
+            "type": "insulated",
+            "value": {
+                "t_amb": 25,
+                "value": 10
+            }
+        },
+        "Y-": {
+            "type": "insulated",
+            "value": {
+                "t_amb": 25,
+                "value": 10
+            }
+        },
+        "Z+": {
+            "type": [
+                "const_h"
+            ],
+            "value": {
+                "t_amb": 5,
+                "value": 25
+            }
+        },
+        "Z-": {
+            "type": "HTC",
+            "value": {
+                "t_amb": 25,
+                "value": 10
+            }
+        }
+    },
+    "IC": 25,
+    "model": {
+        "bodies": {
+            "die": {
+                "size": {
+                    "X": 0.01,
+                    "Y": 0.01,
+                    "Z": 0.003
+                },
+                "material": {
+                    "name": "Silicon",
+                    "k": 150,
+                    "rho": 2329,
+                    "cp": 700
+                },
+                "mesh": {
+                    "size" : {
+                        "dx":0.00025,
+                        "dy":0.00025,
+                        "dz":0.0005
+                    },
+                    "precedence":100}
+            },
+            "mold": {
+                "size": {
+                    "X": 0.015,
+                    "Y": 0.015,
+                    "Z": 0.005
+                },
+                "material": {
+                    "name": "Epoxy Molding Compound (EMC)",
+                    "k": 0.4,
+                    "rho": 1100,
+                    "cp": 1600
+                },
+                "mesh": {
+                    "size" : {
+                        "dx":0.001,
+                        "dy":0.001,
+                        "dz":0.001
+                    },
+                    "precedence":5}
+            },
+            "underfill": {
+                "size": {
+                    "X": 0.012,
+                    "Y": 0.012,
+                    "Z": 0.004
+                },
+                "material": {
+                    "name": "Epoxy Molding Compound (EMC)",
+                    "k": 0.4,
+                    "rho": 1100,
+                    "cp": 1600
+                },
+                "mesh": {
+                    "size" : {
+                        "dx":0.001,
+                        "dy":0.001,
+                        "dz":0.001
+                    },
+                    "precedence":98}
+            },
+            "bumps": {
+                "size": {
+                    "X": 0.01,
+                    "Y": 0.01,
+                    "Z": 0.002
+                },
+                "material": {
+                    "name": "SnPb Alloy",
+                    "k": 50,
+                    "rho": 8900,
+                    "cp": 300
+                },
+                "mesh": {
+                    "size" : {
+                        "dx":0.001,
+                        "dy":0.001,
+                        "dz":0.001
+                    },
+                    "precedence":99}
+            },
+            "solder": {
+                "size": {
+                    "X": 0.015,
+                    "Y": 0.015,
+                    "Z": 0.002
+                },
+                "material": {
+                    "name": "SnPb Alloy",
+                    "k": 50,
+                    "rho": 8900,
+                    "cp": 300
+                },
+                "mesh": {
+                    "size" : {
+                        "dx":0.001,
+                        "dy":0.001,
+                        "dz":0.001
+                    },
+                    "precedence":6}
+            },
+            "substrate": {
+                "size": {
+                    "X": 0.015,
+                    "Y": 0.015,
+                    "Z": 0.005
+                },
+                "material": {
+                    "name": "FR4 (Glass-Reinforced Epoxy Laminate)",
+                    "k": 0.3,
+                    "rho": 1850,
+                    "cp": 1300
+                },
+                "mesh": {
+                    "size" : {
+                        "dx":0.001,
+                        "dy":0.001,
+                        "dz":0.001
+                    },
+                    "precedence":7}
+            }
+        },
+        "num_sources": {
+            "X": 15,
+            "Y": 15
+        },
+        "smallest_thickness": 0.0005
+    },
+    "start_time": 0,
+    "end_time": 1000,
+    "dt":1
+}

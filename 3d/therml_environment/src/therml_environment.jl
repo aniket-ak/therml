@@ -27,6 +27,32 @@ function julia_main()::Cint
 end
 int(x) = floor(Int, x)
 
+function write_details_to_file(k, X_nodes, Y_nodes, Z_nodes, path)
+    k_file = joinpath(path, "conductivity.jld")
+    save(k_file, "k", k)
+
+    f = open(joinpath(path, "x_mesh.txt"), "w")
+    for i in X_nodes
+        write(f, string(i))
+        write(f,"\n")
+    end
+    close(f)
+
+    f = open(joinpath(path, "y_mesh.txt"), "w")
+    for i in Y_nodes
+        write(f, string(i))
+        write(f,"\n")
+    end
+    close(f)
+
+    f = open(joinpath(path, "z_mesh.txt"), "w")
+    for i in Z_nodes
+        write(f, string(i))
+        write(f,"\n")
+    end
+    close(f)
+end
+
 function round_off(list_)
     list_out = [round(i, digits=6) for i in list_]
     return list_out
@@ -712,7 +738,7 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     sol = zeros((n_steps, size(u0)...))
     t_ = zeros(n_steps)
 
-    integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-6, abstol=1e-6, maxiters=10000, progress=true)
+    integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-3, abstol=1e-3, maxiters=10000, progress=true)
     for i in range(1,n_steps)
         step!(integrator, dt, true)
         # step!(integrator)

@@ -390,14 +390,14 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
                     print("contour", contour.shape)
                     print(contour)
                     fig_temp = px.imshow(contour,labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
-                elif viz_cut_plane == "YZ":
-                    print("YZ")
-                    contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
-                    fig_temp = px.imshow(contour,labels=dict(x="Y", y="Z",color="Temperature"),color_continuous_scale='jet')
-                else:
+                elif viz_cut_plane == "XZ":
                     print("XZ")
+                    contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
+                    fig_temp = px.imshow(contour,labels=dict(x="Z", y="X",color="Temperature"),color_continuous_scale='jet')
+                else:
+                    print("YZ")
                     contour = solution_[contour_index, 1:-1, int(slider_value*solution_.shape[2]), 1:-1]
-                    fig_temp = px.imshow(contour,labels=dict(x="X", y="Z",color="Temperature"),color_continuous_scale='jet')
+                    fig_temp = px.imshow(contour,labels=dict(x="Z", y="Y",color="Temperature"),color_continuous_scale='jet')
                 
             else:
                 print("else1")

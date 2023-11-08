@@ -666,7 +666,7 @@ function interpolate_(x,y,z,new_x,new_y)
 end
 
 function save_fields(sol, t_, sol_wd, scenario_name)
-    println("Solution shape", size(sol))
+    sol = sol .- 273.15
     h5open(joinpath(sol_wd,scenario_name*"__solution.sol"), "w") do file
         g = HDF5.create_group(file, "solution")
 
@@ -712,9 +712,7 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     sol = zeros((n_steps, size(u0)...))
     t_ = zeros(n_steps)
 
-    println("Start time integration ", Dates.format(now(), "HH:MM:SS"))
-    integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-2, abstol=1e-2, maxiters=1000, progress=true)
-    println("Done with integrator def ", Dates.format(now(), "HH:MM:SS"))
+    integrator = init(problem; reltol=1e-2, abstol=1e-2, maxiters=1000, progress=true)
     for i in range(1,n_steps)
         step!(integrator, dt, true)
         # step!(integrator)
@@ -733,7 +731,6 @@ function solve_(working_dir, power_file, settings, progress_file_name)
         write(progress_file,"\n")
         close(progress_file)
     end
-    println("Done time integration ", Dates.format(now(), "HH:MM:SS"))
 
     return sol, t_
 end

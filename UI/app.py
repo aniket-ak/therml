@@ -13,6 +13,7 @@ import random
 from functions import *
 import time
 import json
+import plotly.graph_objects as go
 
 working_dir_proj = ""
 run_name_proj = ""
@@ -140,7 +141,7 @@ left_accordion = dbc.Accordion([
 
         dbc.Card([
             html.Label("Package layout"),
-            dbc.CardImg(src="http://localhost:8052/package_simplified.png", style={"width": "40rem"},className = 'align-self-center')
+            dcc.Graph(id="geometry")
         ], style={"margin-top": "7px"})
 
 
@@ -582,6 +583,34 @@ def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, di
             return False
     else:
         return False
+
+@app.callback(
+    Output("geometry", "figure"),
+    [Input("mold_x","value"), Input("mold_y","value"), Input("mold_z","value"), Input("die_x","value"), Input("die_y","value"), Input("die_z","value"),
+    Input("underfill_x","value"), Input("underfill_y","value"), Input("underfill_z","value"), Input("bumps_x","value"), Input("bumps_y","value"), Input("bumps_z","value"), 
+    Input("substrate_x","value"), Input("substrate_y","value"), Input("substrate_z","value"), Input("solder_x","value"), Input("solder_y","value"), Input("solder_z","value"),
+])
+def toggle_modal(mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
+                 bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z):
+    fig = go.Figure()
+    
+    #8dd3c7 #f1f0bc #d9a0ac #a9a1b3 #efb46f #bbdc77 #f0d1e1 #c9a8c9 #c8d3c3 #ffed6f
+    if None not in [mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z, bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z]:
+        fig.add_shape(type="rect", x0=-solder_x/2, y0=0, x1=solder_x/2, y1=solder_z, line=dict( color="black", width=2), fillcolor="#8dd3c7",opacity=0.5,label=dict(text="solder", textposition="top left"))
+        fig.add_shape(type="rect", x0=-substrate_x/2, y0=solder_z, x1=substrate_x/2, y1=solder_z+substrate_z, line=dict( color="black", width=2), fillcolor="#f1f0bc",opacity=0.5, label = dict(text="substrate",textposition="top left"))
+        fig.add_shape(type="rect", x0=-mold_x/2, y0=solder_z+substrate_z, x1=mold_x/2, y1=solder_z+substrate_z+mold_z, line=dict( color="black", width=2), fillcolor="#d9a0ac",opacity=0.5, label=dict(text="mold",textposition="top left"))
+        fig.add_shape(type="rect", x0=-underfill_x/2, y0=solder_z+substrate_z, x1=underfill_x/2, y1=solder_z+substrate_z+underfill_z, line=dict( color="black", width=2), fillcolor="#a9a1b3",opacity=0.5,label=dict(text="underfill",textposition="top left"))
+        fig.add_shape(type="rect", x0=-bumps_x/2, y0=solder_z+substrate_z, x1=bumps_x/2, y1=solder_z+substrate_z+bumps_z, line=dict( color="black", width=2), fillcolor="#efb46f",opacity=0.5,label=dict(text="bumps",textposition="top left"))
+        fig.add_shape(type="rect", x0=-die_x/2, y0=solder_z+substrate_z+bumps_z, x1=die_x/2, y1=solder_z+substrate_z+bumps_z+die_z, line=dict( color="black", width=2), fillcolor="#bbdc77",opacity=0.5,label=dict(text="die",textposition="top left"))
+        
+        bounds_x = (-mold_x/2-5, mold_x/2+5)
+        bounds_y = (0-5, solder_z+substrate_z+mold_z+5)
+
+        fig.update_shapes(dict(xref='x', yref='y'))
+        # Set axes properties
+        fig.update_xaxes(range=[bounds_x[0], bounds_x[1]], showgrid=False)
+        fig.update_yaxes(range=[bounds_y[0], bounds_y[1]])
+    return fig
 
 @app.callback(
     Output("modal", "is_open"),

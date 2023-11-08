@@ -712,7 +712,7 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     sol = zeros((n_steps, size(u0)...))
     t_ = zeros(n_steps)
 
-    integrator = init(problem; reltol=1e-2, abstol=1e-2, maxiters=1000, progress=true)
+    integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-6, abstol=1e-6, maxiters=10000, progress=true)
     for i in range(1,n_steps)
         step!(integrator, dt, true)
         # step!(integrator)

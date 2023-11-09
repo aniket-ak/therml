@@ -703,7 +703,7 @@ function save_fields(sol, t_, sol_wd, scenario_name)
     end
 end
 
-function solve_(working_dir, power_file, settings, progress_file_name)
+function solve_(working_dir, sol_wd, power_file, settings, progress_file_name)
 
     progress_file = open(progress_file_name, "w")
     close(progress_file)
@@ -720,7 +720,7 @@ function solve_(working_dir, power_file, settings, progress_file_name)
 
     k_by_rho_cp, k = get_k_by_rho_cp((X_nodes, Y_nodes, Z_nodes), (Nx, Ny, Nz), settings)
 
-    write_mesh_and_conductivity_to_file(k, X_nodes, Y_nodes, Z_nodes, joinpath(working_dir, "Solution"))
+    write_mesh_and_conductivity_to_file(k, X_nodes, Y_nodes, Z_nodes, sol_wd)
 
     u0 = zeros(Nx,Ny,Nz)
 
@@ -799,7 +799,7 @@ function real_main()
 
     date_start = now()
     println("Start solution at : ", Dates.format(date_start, "HH:MM:SS"))
-    sol,t_ = solve_(working_dir, scenario_name, settings, progress_file_name);
+    sol,t_ = solve_(working_dir, sol_wd, scenario_name, settings, progress_file_name);
 
     #do_plotting(sol, sol_wd, settings, scenario_name, false);
     

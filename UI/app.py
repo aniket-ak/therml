@@ -15,6 +15,7 @@ import time
 import json
 import plotly.graph_objects as go
 import itertools
+import h5py
 
 working_dir_proj = ""
 run_name_proj = ""
@@ -391,7 +392,7 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
                 if viz_cut_plane == "XY":
                     contour = solution_[contour_index, 1:-1, 1:-1, int(slider_value*solution_.shape[3])]
                     fig_temp = px.imshow(contour,labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
-                elif viz_cut_plane == "XZ":
+                elif viz_cut_plane == "ZX":
                     contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
                     fig_temp = px.imshow(contour,labels=dict(x="Z", y="X",color="Temperature"),color_continuous_scale='jet')
                 else:
@@ -609,22 +610,31 @@ def toggle_modal(working_dir, mold_x, mold_y, mold_z, die_x, die_y, die_z, under
         
         if working_dir is not None:
             solution_dir = os.path.join(os.path.join(working_dir, run_name_proj), "Solution")
-            print("Solution dir", solution_dir)
 
             if os.path.exists(solution_dir):
-                print("inside loop")
                 x_mesh = open(os.path.join(solution_dir,"x_mesh.txt"), "r").readlines()
                 x_mesh = [float(i.split("\n")[0]) for i in x_mesh][1:-1]
+                cell_centers_x = [x_mesh[i]-x_mesh[i-1] for i in range(1,len(x_mesh))]
 
                 y_mesh = open(os.path.join(solution_dir,"y_mesh.txt"), "r").readlines()
                 y_mesh = [float(i.split("\n")[0]) for i in y_mesh][1:-1]
+                cell_centers_y = [y_mesh[i]-y_mesh[i-1] for i in range(1,len(y_mesh))]
 
                 z_mesh = open(os.path.join(solution_dir,"z_mesh.txt"), "r").readlines()
                 z_mesh = [float(i.split("\n")[0]) for i in z_mesh][1:-1]
+                cell_centers_z = [z_mesh[i]-z_mesh[i-1] for i in range(1,len(z_mesh))]
 
                 mesh = np.array([i for i in itertools.product(x_mesh, y_mesh, z_mesh)])*1e3
+                mesh_cells = np.array([i for i in itertools.product(cell_centers_x, cell_centers_y, cell_centers_z)])*1e3
                 mesh_to_plot = mesh[mesh[:,1] == 0]
-                fig.add_scatter(x=mesh_to_plot[:,0], y=mesh_to_plot[:,2], mode="markers")
+                mesh_cells_center = mesh_cells[mesh_cells[:,1] == 0]
+
+                # f = h5py.File(os.path.join(solution_dir,"conductivity.jld"), "r")
+                # k = np.array(list(f['k'])).T
+
+                # fig.add_scatter(x=mesh_to_plot[:,0], y=mesh_to_plot[:,2], mode="markers")
+                # y_center_i = int(k.shape[1]/2)
+                # fig.add_trace(mesh_cells_center[:,0], mesh_cells_center[:,2], go.Contour(k[1:-1,y_center_i, 1:-1]))
     return fig
 
 @app.callback(

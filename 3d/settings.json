@@ -63,7 +63,7 @@
                 "size": {
                     "X": 0.01,
                     "Y": 0.01,
-                    "Z": 0.003
+                    "Z": 0.004
                 },
                 "material": {
                     "name": "Silicon",
@@ -83,7 +83,7 @@
                 "size": {
                     "X": 0.015,
                     "Y": 0.015,
-                    "Z": 0.005
+                    "Z": 0.008
                 },
                 "material": {
                     "name": "Epoxy Molding Compound (EMC)",
@@ -103,7 +103,7 @@
                 "size": {
                     "X": 0.012,
                     "Y": 0.012,
-                    "Z": 0.004
+                    "Z": 0.002
                 },
                 "material": {
                     "name": "Epoxy Molding Compound (EMC)",

@@ -72,7 +72,7 @@ material_names.sort()
 
 toast = dbc.Toast(
         "Settings saved successfully",id="save_success_toast",header="Notification",
-        is_open=False,dismissable=True, icon="success", duration=4000, style={"position": "fixed", 
+        is_open=False,dismissable=True, icon="success", duration=1000, style={"position": "fixed", 
         "top": 66, "right": 10, "width": 350},
     )
 
@@ -89,7 +89,7 @@ left_accordion = dbc.Accordion([
         dbc.Row([
             dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="mold_x",value=15)], width=2),
             dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="mold_y",value=15)], width=2),
-            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="mold_z",value=5)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="mold_z",value=8)], width=2),
             dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="mold_material")], width=3),
             dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="mold_surface_material")], width=3),
         ]),
@@ -107,7 +107,7 @@ left_accordion = dbc.Accordion([
         dbc.Row([
             dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="underfill_x",value=12)], width=2),
             dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="underfill_y",value=12)], width=2),
-            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="underfill_z",value=4)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="underfill_z",value=2)], width=2),
             dbc.Col([dbc.Select(material_names, "Epoxy Molding Compound (EMC)", id="underfill_material")], width=3),
             dbc.Col([dbc.Select(material_names, "FR4", id="epoxy_surface_material")], width=3)
         ]),
@@ -116,7 +116,7 @@ left_accordion = dbc.Accordion([
         dbc.Row([
             dbc.Col([dbc.Input(placeholder="X", type="number", size="sm",id="bumps_x",value=10)], width=2),
             dbc.Col([dbc.Input(placeholder="Y", type="number", size="sm",id="bumps_y",value=10)], width=2),
-            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="bumps_z",value=3)], width=2),
+            dbc.Col([dbc.Input(placeholder="Z", type="number", size="sm",id="bumps_z",value=2)], width=2),
             dbc.Col([dbc.Select(material_names, "SnPb Alloy", id="bumps_materials")], width=3),
             dbc.Col([dbc.Select(material_names, "FR4", id="bumps_surface_materials")], width=3)
         ]),
@@ -289,7 +289,7 @@ app.layout = dbc.Container([
                             dbc.Label("1. Select the working directory"),
                             dbc.Input(placeholder="Working Directory", type="text", id="working_dir", required=True),
                             dbc.Row([dbc.Col([dbc.Label("2. Model Settings")]), 
-                                     dbc.Col([dbc.Button("Settings", id="open", n_clicks=0),])
+                                     dbc.Col([dbc.Button("Settings", id="settings_button", n_clicks=0),])
                                      ],style={"margin-top": "30px"}, justify="between"),
                             settings_modal,
                             dbc.Col(["3. Upload Power dissipation files"]),
@@ -303,7 +303,7 @@ app.layout = dbc.Container([
                             dbc.Row([
                                 dbc.Col([dbc.Table.from_dataframe(df_tables, striped=True, bordered=True, hover=True)], width=12, id="scenario"),
                                 dbc.Toast(
-                                        "Simulation submitted",id="success_toast",header="Notification",
+                                        "Simulation completed",id="success_toast",header="Notification",
                                         is_open=False,dismissable=True, icon="success", duration=4000, style={"position": "fixed", 
                                         "top": 66, "right": 10, "width": 350},
                                     ),
@@ -374,7 +374,7 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
         sol_name = name+"__solution.sol"
         solution_dir = os.path.join(os.path.join(working_dir_proj, run_name_proj), "Solution")
         file = os.path.join(solution_dir, sol_name)
-        print("File name", file)
+        
         if slider_value is None:
             slider_value = 0
         if viz_time_value is None:
@@ -384,30 +384,21 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
             contour_time = time_[np.where(time_==viz_time_value)]
             contour_index = int(np.where(time_==viz_time_value)[0])
             if contour_time is not []:
-                print("inside plotting 1")
                 if viz_cut_plane == "XY":
-                    print("XY")
                     contour = solution_[contour_index, 1:-1, 1:-1, int(slider_value*solution_.shape[3])]
-                    print("contour", contour.shape)
-                    print(contour)
                     fig_temp = px.imshow(contour,labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
                 elif viz_cut_plane == "XZ":
-                    print("XZ")
                     contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
                     fig_temp = px.imshow(contour,labels=dict(x="Z", y="X",color="Temperature"),color_continuous_scale='jet')
                 else:
-                    print("YZ")
                     contour = solution_[contour_index, 1:-1, int(slider_value*solution_.shape[2]), 1:-1]
                     fig_temp = px.imshow(contour,labels=dict(x="Z", y="Y",color="Temperature"),color_continuous_scale='jet')
                 
-            else:
-                print("else1")
+            else:   
                 fig_temp = px.area()
-        else:
-            print("else2")
+        else:   
             fig_temp = px.area()
     else:
-        print("else 3")
         fig_temp = px.area()
     return fig, fig_temp
 
@@ -477,7 +468,6 @@ def filter_heatmap(n_clicks, active_page, working_dir, run_name, status,colors):
     print(captured_output)
 
     julia_thread.join()
-
     
     # julia --project=./therml_environment /Users/aniket/Documents/MarlinSim/03_code/therml/3d/therml_environment/precompile_.jl -t 4 -working_dir 
     #   /Users/aniket/Documents/MarlinSim/04_testing/scenarios -power file_1.csv -run_name "sim_1"
@@ -553,7 +543,7 @@ def check_working_dir(dir):
 @app.callback(
     Output("save_success_toast", "is_open"),
     [Input("save_settings", "n_clicks")],
-    [State('working_dir', 'value'),State("modal", "is_open"), State("open", "n_clicks"),
+    [State('working_dir', 'value'),State("modal", "is_open"), State("settings_button", "n_clicks"),
     State("mold_x","value"), State("mold_y","value"), State("mold_z","value"), State("die_x","value"), State("die_y","value"), State("die_z","value"),
     State("underfill_x","value"), State("underfill_y","value"), State("underfill_z","value"), State("bumps_x","value"), State("bumps_y","value"), State("bumps_z","value"), 
     State("substrate_x","value"), State("substrate_y","value"), State("substrate_z","value"), State("solder_x","value"), State("solder_y","value"), State("solder_z","value"),
@@ -614,7 +604,7 @@ def toggle_modal(mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, under
 
 @app.callback(
     Output("modal", "is_open"),
-    [Input("open", "n_clicks")],
+    [Input("settings_button", "n_clicks")],
     [State("modal", "is_open")])
 def toggle_modal(n1, is_open):
     if n1:

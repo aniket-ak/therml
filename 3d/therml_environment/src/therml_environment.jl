@@ -466,7 +466,8 @@ function define_volume_sources(power_file, settings, Nx, Ny, Nz, X_nodes, Y_node
     source_y = range(-y_length/2, y_length/2, source_Ny) |> collect
 
     interpolated_heat = transpose(interpolate_(source_x,source_y,heat_values,cell_centers_x,cell_centers_y))
-    source_index = findall(x -> x == source_z_val, Z_nodes)[1]-1
+    diff_ = abs.(Z_nodes.-source_z_val)
+    source_index = findall(x -> x < 1e-6, diff_)[1]-1
     source[die_nodes_x[1]:die_nodes_x[2]-1,die_nodes_y[1]:die_nodes_y[2]-1,source_index] = interpolated_heat
     return source
 end

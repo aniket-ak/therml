@@ -27,7 +27,7 @@ function julia_main()::Cint
 end
 int(x) = floor(Int, x)
 
-function write_details_to_file(k, X_nodes, Y_nodes, Z_nodes, path)
+function write_mesh_and_conductivity_to_file(k, X_nodes, Y_nodes, Z_nodes, path)
     k_file = joinpath(path, "conductivity.jld")
     save(k_file, "k", k)
 
@@ -719,6 +719,8 @@ function solve_(working_dir, power_file, settings, progress_file_name)
     println("Smallest cells in X, Y and Z are ", min_dx, " , ", min_dy, " , ", min_dz)
 
     k_by_rho_cp, k = get_k_by_rho_cp((X_nodes, Y_nodes, Z_nodes), (Nx, Ny, Nz), settings)
+
+    write_mesh_and_conductivity_to_file(k, X_nodes, Y_nodes, Z_nodes, joinpath(working_dir, "Solution"))
 
     u0 = zeros(Nx,Ny,Nz)
 

@@ -10,7 +10,9 @@ import os
 def read_solution(file):
     f = h5py.File(file, "r")
     time_duration = len(f['solution'].keys())
-    sol_shape = np.array(list(f['solution']['1.0'])).T.shape
+
+    first_key = list(f['solution'].keys())[0]
+    sol_shape = np.array(list(f['solution'][first_key])).T.shape
 
     solution = np.empty((tuple([time_duration] + list(sol_shape))))
     for i in range(1,time_duration):
@@ -32,7 +34,7 @@ def save_to_json(file, inputs):
     bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
     mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
     mold_surface_material, die_surface_material, underfill_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials, 
-    ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp) = inputs
+    ambient_temp, start_time, end_time, saveat, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp) = inputs
 
     settings_file = os.path.join("../", "3d/settings.json")
     with open(settings_file, 'r') as settings_f:
@@ -46,9 +48,9 @@ def save_to_json(file, inputs):
     settings_data["BC"]["Z+"]["value"]["t_amb"] = top_bc_value
     settings_data["BC"]["Z+"]["value"]["value"] = top_bc_ref_temp
     
-    settings_data["BC"]["Z+"]["type"] = bottom_bc_type
-    settings_data["BC"]["Z+"]["value"]["t_amb"] = bot_bc_value
-    settings_data["BC"]["Z+"]["value"]["value"] = bot_bc_ref_temp
+    settings_data["BC"]["Z-"]["type"] = bottom_bc_type
+    settings_data["BC"]["Z-"]["value"]["t_amb"] = bot_bc_value
+    settings_data["BC"]["Z-"]["value"]["value"] = bot_bc_ref_temp
 
     settings_data["IC"] = ambient_temp
 
@@ -108,6 +110,7 @@ def save_to_json(file, inputs):
 
     settings_data["start_time"] = start_time
     settings_data["end_time"] = end_time
+    settings_data["dt"] = saveat
 
     with open(file, 'w') as f:
         json.dump(settings_data,f, indent=2)

@@ -14,6 +14,7 @@ from functions import *
 import time
 import json
 import plotly.graph_objects as go
+import itertools
 
 working_dir_proj = ""
 run_name_proj = ""
@@ -181,7 +182,10 @@ left_accordion = dbc.Accordion([
 
             dbc.Col([
                 html.Label("End time [s]"),
-                dbc.Input(placeholder="End time",id="end_time", type="number", value=10.0)])]),
+                dbc.Input(placeholder="End time",id="end_time", type="number", value=10.0)]),
+            dbc.Col([
+                html.Label("Save every [s]"),
+                dbc.Input(placeholder="Save at",id="saveat", type="number", value=1.0)])]),
     ], title="Problem Setup"),
 ])
 
@@ -232,7 +236,7 @@ navbar = dbc.NavbarSimple(
     ],
     brand="MarlinSim therML",
     brand_href="#",
-    color="#0c2340",
+    color="#008080",
     dark=True,
 )
 
@@ -550,14 +554,14 @@ def check_working_dir(dir):
     State("mold_material", "value"), State("die_material", "value"), State("underfill_material", "value"), State("bumps_materials", "value"), State("substrate_materials", "value"),
     State("solder_materials", "value"), State("mold_surface_material", "value"), State("die_surface_material", "value"), State("epoxy_surface_material", "value"),
     State("bumps_surface_materials", "value"), State("substrate_surface_materials", "value"), State("solder_surface_materials", "value"), State("ambient_temp", "value"),
-    State("start_time", "value"), State("end_time", "value"), State("top_bc_type", "value"), State("top_bc_value", "value"), State("top_bc_ref_temp", "value"),
+    State("start_time", "value"), State("end_time", "value"), State("saveat", "value"), State("top_bc_type", "value"), State("top_bc_value", "value"), State("top_bc_ref_temp", "value"),
     State("bottom_bc_type", "value"), State("bot_bc_value", "value"), State("bot_bc_ref_temp", "value"),
 ])
 def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
                  bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
                  mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
                  mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials,
-                 ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp):
+                 ambient_temp, start_time, end_time, saveat, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp):
     global working_dir_proj
     working_dir_proj = working_dir
     if n1:
@@ -567,7 +571,7 @@ def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, di
                     bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z, 
                     mold_material, die_material, underfill_material, bumps_materials, substrate_materials, solder_materials,
                     mold_surface_material, die_surface_material, epoxy_surface_material, bumps_surface_materials, substrate_surface_materials, solder_surface_materials,
-                    ambient_temp, start_time, end_time, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp))
+                    ambient_temp, start_time, end_time, saveat, top_bc_type, top_bc_value, top_bc_ref_temp, bottom_bc_type, bot_bc_value, bot_bc_ref_temp))
             return True
         else:
             return False
@@ -576,13 +580,15 @@ def toggle_modal(n1, working_dir, is_open, n2, mold_x, mold_y, mold_z, die_x, di
 
 @app.callback(
     Output("geometry", "figure"),
+    [State('working_dir', 'value')],
     [Input("mold_x","value"), Input("mold_y","value"), Input("mold_z","value"), Input("die_x","value"), Input("die_y","value"), Input("die_z","value"),
     Input("underfill_x","value"), Input("underfill_y","value"), Input("underfill_z","value"), Input("bumps_x","value"), Input("bumps_y","value"), Input("bumps_z","value"), 
     Input("substrate_x","value"), Input("substrate_y","value"), Input("substrate_z","value"), Input("solder_x","value"), Input("solder_y","value"), Input("solder_z","value"),
 ])
-def toggle_modal(mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
+def toggle_modal(working_dir, mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z,
                  bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z):
     fig = go.Figure()
+    global run_name_proj
     
     #8dd3c7 #f1f0bc #d9a0ac #a9a1b3 #efb46f #bbdc77 #f0d1e1 #c9a8c9 #c8d3c3 #ffed6f
     if None not in [mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, underfill_y, underfill_z, bumps_x, bumps_y, bumps_z, substrate_x, substrate_y, substrate_z, solder_x, solder_y, solder_z]:
@@ -593,13 +599,32 @@ def toggle_modal(mold_x, mold_y, mold_z, die_x, die_y, die_z, underfill_x, under
         fig.add_shape(type="rect", x0=-bumps_x/2, y0=solder_z+substrate_z, x1=bumps_x/2, y1=solder_z+substrate_z+bumps_z, line=dict( color="black", width=2), fillcolor="#efb46f",opacity=0.5,label=dict(text="bumps",textposition="top left"))
         fig.add_shape(type="rect", x0=-die_x/2, y0=solder_z+substrate_z+bumps_z, x1=die_x/2, y1=solder_z+substrate_z+bumps_z+die_z, line=dict( color="black", width=2), fillcolor="#bbdc77",opacity=0.5,label=dict(text="die",textposition="top left"))
         
-        bounds_x = (-mold_x/2-5, mold_x/2+5)
-        bounds_y = (0-5, solder_z+substrate_z+mold_z+5)
+        bounds_x = (-mold_x/2-1, mold_x/2+1)
+        bounds_y = (0-1, solder_z+substrate_z+mold_z+1)
 
         fig.update_shapes(dict(xref='x', yref='y'))
         # Set axes properties
         fig.update_xaxes(range=[bounds_x[0], bounds_x[1]], showgrid=False)
         fig.update_yaxes(range=[bounds_y[0], bounds_y[1]])
+        
+        if working_dir is not None:
+            solution_dir = os.path.join(os.path.join(working_dir, run_name_proj), "Solution")
+            print("Solution dir", solution_dir)
+
+            if os.path.exists(solution_dir):
+                print("inside loop")
+                x_mesh = open(os.path.join(solution_dir,"x_mesh.txt"), "r").readlines()
+                x_mesh = [float(i.split("\n")[0]) for i in x_mesh][1:-1]
+
+                y_mesh = open(os.path.join(solution_dir,"y_mesh.txt"), "r").readlines()
+                y_mesh = [float(i.split("\n")[0]) for i in y_mesh][1:-1]
+
+                z_mesh = open(os.path.join(solution_dir,"z_mesh.txt"), "r").readlines()
+                z_mesh = [float(i.split("\n")[0]) for i in z_mesh][1:-1]
+
+                mesh = np.array([i for i in itertools.product(x_mesh, y_mesh, z_mesh)])*1e3
+                mesh_to_plot = mesh[mesh[:,1] == 0]
+                fig.add_scatter(x=mesh_to_plot[:,0], y=mesh_to_plot[:,2], mode="markers")
     return fig
 
 @app.callback(

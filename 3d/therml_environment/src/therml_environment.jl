@@ -15,10 +15,61 @@ using HDF5
 using Logging
 using LoggingExtras
 using Sundials
+using Nettle
+
+function get_serial_number()
+    if Sys.iswindows()
+        command = `wmic bios get serialnumber`
+    elseif Sys.isapple()
+        command = pipeline(`ioreg -l`, `grep IOPlatformSerialNumber`)
+    elseif Sys.islinux()
+        command = `cat /var/lib/dbus/machine-id`
+    else
+        return "Unsupported OS"
+    end
+
+    try
+        if Sys.isapple()
+            # For macOS, the output processing is a bit different
+            serial = read(pipeline(command, `awk '/IOPlatformSerialNumber/ {print $4}'`, `tr -d '"'`), String)
+        else
+            serial = read(pipeline(command, `tr -d '\r'`, `awk NR==2`), String)
+        end
+        return strip(serial)
+    catch e
+        return string(e)
+    end
+end
+
+function read_license_file(license_file_location)
+    return "34d7d82e6b4d3870a9ccc3a18111b6442bae42cd612c07bea075cb4e60b30685"
+end
+
+function check_license()
+    serial_num = get_serial_number()
+    key_ = "MarlinSim_" * string(serial_num)
+    license_key = hexdigest("sha256", key_)
+
+    license_file_location = ""
+    if haskey(ENV, "THERML_ENVIRONMENT")
+        license_file_location = ENV["THERML_ENVIRONMENT"]
+    end
+    given_license = read_license_file(license_file_location)
+
+    if license_key == given_license
+        return true
+    else
+        return false
+    end
+end
 
 function julia_main()::Cint
     try
-        real_main()
+        if check_license()
+            real_main()
+        else
+            println("-------License file not found-------")
+        end
     catch
         Base.invokelatest(Base.display_error, Base.catch_stack())
         return 1

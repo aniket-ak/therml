@@ -10,13 +10,14 @@ import os
 def read_solution(file):
     f = h5py.File(file, "r")
     time_duration = len(f['solution'].keys())
+    time_vals = list(f['solution'].keys())
 
     first_key = list(f['solution'].keys())[0]
     sol_shape = np.array(list(f['solution'][first_key])).T.shape
 
     solution = np.empty((tuple([time_duration] + list(sol_shape))))
     for i in range(1,time_duration):
-        solution[i,:] = np.array(list(f['solution'][str(float(i))])).T
+        solution[i,:] = np.array(list(f['solution'][str(float(time_vals[i]))])).T
     time_ = list(f['solution'].keys())
     time_ = [float(i) for i in time_]
     time_.sort()
@@ -45,12 +46,12 @@ def save_to_json(file, inputs):
         materials = json.load(file_)
     
     settings_data["BC"]["Z+"]["type"] = top_bc_type
-    settings_data["BC"]["Z+"]["value"]["t_amb"] = top_bc_value
-    settings_data["BC"]["Z+"]["value"]["value"] = top_bc_ref_temp
+    settings_data["BC"]["Z+"]["value"]["t_amb"] = top_bc_ref_temp
+    settings_data["BC"]["Z+"]["value"]["value"] = top_bc_value
     
     settings_data["BC"]["Z-"]["type"] = bottom_bc_type
-    settings_data["BC"]["Z-"]["value"]["t_amb"] = bot_bc_value
-    settings_data["BC"]["Z-"]["value"]["value"] = bot_bc_ref_temp
+    settings_data["BC"]["Z-"]["value"]["t_amb"] = bot_bc_ref_temp
+    settings_data["BC"]["Z-"]["value"]["value"] = bot_bc_value
 
     settings_data["IC"] = ambient_temp
 

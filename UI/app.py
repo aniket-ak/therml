@@ -237,8 +237,10 @@ navbar = dbc.NavbarSimple(
     ],
     brand="MarlinSim therML",
     brand_href="#",
-    color="#008080",
+    color="#274b68",
     dark=True,
+    fluid=True,
+    style={"text_color": "red"}
 )
 
 upload_component = dcc.Upload(

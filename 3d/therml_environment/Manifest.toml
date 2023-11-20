@@ -2,7 +2,7 @@
 
 julia_version = "1.9.2"
 manifest_format = "2.0"
-project_hash = "c34128595d45370947e2d1d8b30901439b4c2989"
+project_hash = "316373f1338239f0cb5032a73e5230ca7659bac9"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "5d2e21d7b0d8c22f67483ef95ebdc39c0e6b6003"
@@ -608,6 +608,11 @@ version = "0.4.5"
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
+[[deps.GMP_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
+version = "6.2.1+2"
+
 [[deps.GPUArrays]]
 deps = ["Adapt", "GPUArraysCore", "LLVM", "LinearAlgebra", "Printf", "Random", "Reexport", "Serialization", "Statistics"]
 git-tree-sha1 = "8ad8f375ae365aa1eb2f42e2565a40b55a4b69a8"
@@ -1117,6 +1122,18 @@ deps = ["OpenLibm_jll"]
 git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.2"
+
+[[deps.Nettle]]
+deps = ["Libdl", "Nettle_jll"]
+git-tree-sha1 = "6fa48cbae828267848ee32c1bb31d1652e210d7d"
+uuid = "49dea1ee-f6fa-5aa6-9a11-8816cee7d4b9"
+version = "1.0.0"
+
+[[deps.Nettle_jll]]
+deps = ["Artifacts", "GMP_jll", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "eca63e3847dad608cfa6a3329b95ef674c7160b4"
+uuid = "4c82536e-c426-54e4-b420-14f461c4ed8b"
+version = "3.7.2+0"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"

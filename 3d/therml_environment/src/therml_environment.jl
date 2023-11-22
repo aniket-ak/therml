@@ -187,16 +187,7 @@ function generate_mesh(settings)
 
     X, Y, Z = sort(unique(X)), sort(unique(Y)), sort(unique(Z))
 
-    ghost_x_min = X[1] - bodies_["die"]["mesh"]["size"]["dx"]
-    ghost_x_max = X[end] + bodies_["die"]["mesh"]["size"]["dx"]
-    ghost_y_min = Y[1] - bodies_["die"]["mesh"]["size"]["dy"]
-    ghost_y_max = Y[end] + bodies_["die"]["mesh"]["size"]["dy"]
-    ghost_z_min = Z[1] - bodies_["die"]["mesh"]["size"]["dz"]
-    ghost_z_max =  Z[end] + bodies_["die"]["mesh"]["size"]["dz"]
-
-    X_mesh = [ghost_x_min, X[1],X[end], ghost_x_max]
-    Y_mesh = [ghost_y_min, Y[1],Y[end], ghost_y_max]
-    Z_mesh = [ghost_z_min, Z[1],Z[end], ghost_z_max]
+    X_mesh, Y_mesh, Z_mesh = [], [], []
 
     for (i, mesh_point) in enumerate(X)
         if i > 1
@@ -386,6 +377,21 @@ function generate_mesh(settings)
 
     end
 
+    X_mesh, Y_mesh, Z_mesh = sort(unique(X_mesh)), sort(unique(Y_mesh)), sort(unique(Z_mesh))
+    ghost_x_min = X_mesh[1] - abs(X_mesh[2] - X_mesh[1])
+    ghost_x_max = X_mesh[end] + abs(X_mesh[end] - X_mesh[end-1])
+    ghost_y_min = Y_mesh[1] - abs(Y_mesh[2] - Y_mesh[1])
+    ghost_y_max = Y_mesh[end] + abs(Y_mesh[end] - Y_mesh[end-1])
+    ghost_z_min = Z_mesh[1] - abs(Z_mesh[2] - Z_mesh[1])
+    ghost_z_max = Z_mesh[end] + abs(Z_mesh[end] - Z_mesh[end-1])
+
+    append!(X_mesh, ghost_x_min)
+    append!(X_mesh, ghost_x_max)
+    append!(Y_mesh, ghost_y_min)
+    append!(Y_mesh, ghost_y_max)
+    append!(Z_mesh, ghost_z_min)
+    append!(Z_mesh, ghost_z_max)
+    
     X_mesh, Y_mesh, Z_mesh = sort(unique(X_mesh)), sort(unique(Y_mesh)), sort(unique(Z_mesh))
 
     num_cells_x, num_cells_y, num_cells_z = size(X_mesh)[1]-1, size(Y_mesh)[1]-1, size(Z_mesh)[1]-1
@@ -672,8 +678,8 @@ end
 function get_alpha((Nx,Ny,Nz), nodes, k_by_rho_cp)
     X_nodes, Y_nodes, Z_nodes = nodes
 
-    alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half = zeros(Nx,Ny,Nz), 
-        zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz), zeros(Nx,Ny,Nz)
+    alpha_x_i_minus_half, alpha_x_i_plus_half, alpha_y_i_minus_half, alpha_y_i_plus_half, alpha_z_i_minus_half, alpha_z_i_plus_half = ones(Nx,Ny,Nz), 
+    ones(Nx,Ny,Nz), ones(Nx,Ny,Nz), ones(Nx,Ny,Nz), ones(Nx,Ny,Nz), ones(Nx,Ny,Nz)
 
     for k_ in range(2, Nz-1)
         for j_ in range(2, Ny-1)
@@ -716,19 +722,17 @@ function conduction_3d_loop!(du, u, p, t)
         for j_ in range(2, Ny-1)
             for i_ in range(2, Nx-1)
                 ip1, im1, jp1, jm1, kp1, km1 = i_ + 1, i_ - 1, j_ + 1, j_ - 1, k_+1, k_-1
-                du[i_, j_, k_] =  alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_]) - 
-                                    alpha_x_i_minus_half[i_, j_, k_]* (u[i_, j_, k_] - u[im1, j_, k_]) + 
-                                    alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_]) - 
-                                    alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_]) + 
-                                    alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_]) - 
-                                    alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1]) + 
-                                    source[i_, j_, k_]
+                du[i_, j_, k_] =  alpha_x_i_plus_half[i_, j_, k_] * (u[ip1, j_, k_] - u[i_, j_, k_]) - alpha_x_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[im1, j_, k_]) + 
+                                  alpha_y_i_plus_half[i_, j_, k_] * (u[i_, jp1, k_] - u[i_, j_, k_]) - alpha_y_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, jm1, k_]) + 
+                                  alpha_z_i_plus_half[i_, j_, k_] * (u[i_, j_, kp1] - u[i_, j_, k_]) - alpha_z_i_minus_half[i_, j_, k_] * (u[i_, j_, k_] - u[i_, j_, km1]) + 
+                                  source[i_, j_, k_]
             end
         end
     end
     apply_bc(settings, u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
                 abs(Y_nodes[2] - Y_nodes[1]), abs(Y_nodes[end] - Y_nodes[end-1]), 
                 abs(Z_nodes[2]-Z_nodes[1]), abs(Z_nodes[end] - Z_nodes[end-1]))
+    nothing
 end
 
 function read_csv(file_name)

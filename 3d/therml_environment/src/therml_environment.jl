@@ -795,8 +795,11 @@ function solve_(working_dir, sol_wd, power_file, settings, progress_file_name)
     dt = settings["dt"]
     n_steps = round(Int, settings["end_time"]/dt)
 
-    sol = zeros((n_steps, size(u0)...))
+    sol = zeros((n_steps+1, size(u0)...))
     t_ = zeros(n_steps)
+
+    sol[1, :,:,:] = u0
+    t_ = 0
 
     integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-6, abstol=1e-3, maxiters=1000, progress=true, save_everystep=false)
     # integrator = init(problem, reltol=1e-, abstol=1e-3, maxiters=10000, progress=true)
@@ -805,8 +808,8 @@ function solve_(working_dir, sol_wd, power_file, settings, progress_file_name)
         # step!(integrator)
         t,u = integrator.t, integrator.u
         println("Solution time : ",t, " , at ", Dates.format(now(), "HH:MM:SS"))
-        sol[i,:,:,:] = u
-        t_[i] = t
+        sol[i+1,:,:,:] = u
+        t_[i+1] = t
 
         if t > end_time
             terminate!(integrator)

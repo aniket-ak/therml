@@ -796,7 +796,7 @@ function solve_(working_dir, sol_wd, power_file, settings, progress_file_name)
     n_steps = round(Int, settings["end_time"]/dt)
 
     sol = zeros((n_steps+1, size(u0)...))
-    t_ = zeros(n_steps)
+    t_ = zeros(n_steps+1)
 
     sol[1, :,:,:] = u0
     t_ = 0

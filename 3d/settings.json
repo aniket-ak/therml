@@ -19,7 +19,7 @@
             }
         },
         "X-": {
-            "type": "HTC",
+            "type": "insulated",
             "value": {
                 "t_amb": 25,
                 "value": 10
@@ -40,16 +40,14 @@
             }
         },
         "Z+": {
-            "type": [
-                "const_h"
-            ],
+            "type": "insulated",
             "value": {
                 "t_amb": 5,
                 "value": 25
             }
         },
         "Z-": {
-            "type": "HTC",
+            "type": "insulated",
             "value": {
                 "t_amb": 25,
                 "value": 10

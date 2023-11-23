@@ -10,18 +10,21 @@ import os
 def read_solution(file):
     f = h5py.File(file, "r")
     time_duration = len(f['solution'].keys())
-    time_vals = list(f['solution'].keys())
+    time_vals = [float(i) for i in list(f['solution'].keys())]
+    time_vals.sort()
+    keys = [str(i) for i in time_vals]
 
-    first_key = list(f['solution'].keys())[0]
+    first_key = keys[0]
     sol_shape = np.array(list(f['solution'][first_key])).T.shape
 
     solution = np.empty((tuple([time_duration] + list(sol_shape))))
-    for i in range(1,time_duration):
-        solution[i,:] = np.array(list(f['solution'][str(float(time_vals[i]))])).T
+    for i,key in enumerate(keys):
+        solution[i,:] = np.array(list(f['solution'][key])).T
     time_ = list(f['solution'].keys())
     time_ = [float(i) for i in time_]
     time_.sort()
     time_ = np.array(time_)
+    f.close()
     return solution, time_
 
 def get_properties(material_data, key_name):

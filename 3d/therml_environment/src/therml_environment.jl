@@ -718,6 +718,10 @@ function conduction_3d_loop!(du, u, p, t)
 
     source = define_volume_sources(power_file, settings, Nx,Ny,Nz, X_nodes, Y_nodes, Z_nodes)
 
+    apply_bc(settings, u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
+                abs(Y_nodes[2] - Y_nodes[1]), abs(Y_nodes[end] - Y_nodes[end-1]), 
+                abs(Z_nodes[2]-Z_nodes[1]), abs(Z_nodes[end] - Z_nodes[end-1]))
+                
     Threads.@threads for k_ in range(2, Nz-1)
         for j_ in range(2, Ny-1)
             for i_ in range(2, Nx-1)
@@ -729,9 +733,7 @@ function conduction_3d_loop!(du, u, p, t)
             end
         end
     end
-    apply_bc(settings, u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
-                abs(Y_nodes[2] - Y_nodes[1]), abs(Y_nodes[end] - Y_nodes[end-1]), 
-                abs(Z_nodes[2]-Z_nodes[1]), abs(Z_nodes[end] - Z_nodes[end-1]))
+    
     nothing
 end
 

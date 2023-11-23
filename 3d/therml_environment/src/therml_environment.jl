@@ -721,7 +721,7 @@ function conduction_3d_loop!(du, u, p, t)
     apply_bc(settings, u, k, abs(X_nodes[2]-X_nodes[1]), abs(X_nodes[end] - X_nodes[end-1]), 
                 abs(Y_nodes[2] - Y_nodes[1]), abs(Y_nodes[end] - Y_nodes[end-1]), 
                 abs(Z_nodes[2]-Z_nodes[1]), abs(Z_nodes[end] - Z_nodes[end-1]))
-                
+
     Threads.@threads for k_ in range(2, Nz-1)
         for j_ in range(2, Ny-1)
             for i_ in range(2, Nx-1)
@@ -798,8 +798,8 @@ function solve_(working_dir, sol_wd, power_file, settings, progress_file_name)
     sol = zeros((n_steps, size(u0)...))
     t_ = zeros(n_steps)
 
-    # integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-3, abstol=1e-3, maxiters=10000, progress=true)
-    integrator = init(problem, reltol=1e-3, abstol=1e-3, maxiters=10000, progress=true)
+    integrator = init(problem, CVODE_BDF(linear_solver=:GMRES) ; reltol=1e-6, abstol=1e-3, maxiters=1000, progress=true)
+    # integrator = init(problem, reltol=1e-, abstol=1e-3, maxiters=10000, progress=true)
     for i in range(1,n_steps)
         step!(integrator, dt, true)
         # step!(integrator)

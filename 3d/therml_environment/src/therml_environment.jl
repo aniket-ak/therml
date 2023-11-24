@@ -603,7 +603,7 @@ function apply_bc(settings, u, k, delta_x_s, delta_x_e, delta_y_s, delta_y_e, de
     side = "X+"
     if settings["BC"]["X+"]["type"] == "constant_T"
         const_temp = convert_units("temperature", settings["BC"]["X+"]["value"]["value"], settings["units"]["temperature"], "K") 
-        u[end,:,:] .= 2*settings["BC"]["X+"]["value"] .- u[end-1,:,:]
+        u[end,:,:] .= 2*const_temp .- u[end-1,:,:]
     elseif settings["BC"]["X+"]["type"] == "insulated"
         u[end,:,:] .= u[end-1,:,:]
     elseif settings["BC"]["X+"]["type"] == "const_flux"

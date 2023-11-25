@@ -392,14 +392,14 @@ def update_output(name, slider_value, viz_time_value, viz_cut_plane):
             contour_index = int(np.where(time_==viz_time_value)[0])
             if contour_time is not []:
                 if viz_cut_plane == "XY":
-                    contour = solution_[contour_index, 1:-1, 1:-1, int(slider_value*solution_.shape[3])]
-                    fig_temp = px.imshow(contour,labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet')
+                    contour = solution_[contour_index, 1:-1, 1:-1, int(slider_value*solution_.shape[3])].T
+                    fig_temp = px.imshow(contour,labels=dict(x="X", y="Y",color="Temperature"),color_continuous_scale='jet', origin='lower')
                 elif viz_cut_plane == "ZX":
-                    contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1]
-                    fig_temp = px.imshow(contour,labels=dict(x="Z", y="X",color="Temperature"),color_continuous_scale='jet')
+                    contour = solution_[contour_index, int(slider_value*solution_.shape[1]), 1:-1, 1:-1].T
+                    fig_temp = px.imshow(contour,labels=dict(x="Z", y="X",color="Temperature"),color_continuous_scale='jet', origin='lower')
                 else:
-                    contour = solution_[contour_index, 1:-1, int(slider_value*solution_.shape[2]), 1:-1]
-                    fig_temp = px.imshow(contour,labels=dict(x="Z", y="Y",color="Temperature"),color_continuous_scale='jet')
+                    contour = solution_[contour_index, 1:-1, int(slider_value*solution_.shape[2]), 1:-1].T
+                    fig_temp = px.imshow(contour,labels=dict(x="Z", y="Y",color="Temperature"),color_continuous_scale='jet', origin='lower')
                 
             else:   
                 fig_temp = px.area()

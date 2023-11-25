@@ -15,11 +15,11 @@ def read_solution(file):
     keys = [str(i) for i in time_vals]
 
     first_key = keys[0]
-    sol_shape = np.array(list(f['solution'][first_key])).T.shape
+    sol_shape = np.array(list(f['solution'][first_key])).shape
 
     solution = np.empty((tuple([time_duration] + list(sol_shape))))
     for i,key in enumerate(keys):
-        solution[i,:] = np.array(list(f['solution'][key])).T
+        solution[i,:] = np.array(list(f['solution'][key]))
     time_ = list(f['solution'].keys())
     time_ = [float(i) for i in time_]
     time_.sort()

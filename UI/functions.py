@@ -25,6 +25,7 @@ def read_solution(file):
     time_.sort()
     time_ = np.array(time_)
     f.close()
+    solution = solution.transpose((0,2,3,1))
     return solution, time_
 
 def get_properties(material_data, key_name):
